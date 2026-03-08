@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Inventory{% endblock %}
+{% block side_inventory %}active{% endblock %}
+
+{% block content %}
+<header class="content-header">
+    <div>
+        <h1>Inventory & Materials</h1>
+        <p class="subtitle">Track raw materials: fabrics, threads, buttons, and usage.</p>
+    </div>
+    <button class="btn btn-primary glass-btn"><i class="fa-solid fa-warehouse"></i> Add Material</button>
+</header>
+<div class="data-panel glass">
+    <div class="panel-header">
+        <h3>Warehouse Inventory Levels</h3>
+    </div>
+    <div class="table-responsive">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Material Code</th>
+                    <th>Material Name</th>
+                    <th>Category</th>
+                    <th>In Stock</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>MAT-FAB-01</td>
+                    <td>100% Cotton Fabric</td>
+                    <td>Fabric</td>
+                    <td>1000m</td>
+                    <td><span class="badge in-progress" style="color:#60a5fa">Healthy Stock</span></td>
+                </tr>
+                <tr>
+                    <td>MAT-THR-02</td>
+                    <td>Polyester Thread</td>
+                    <td>Thread</td>
+                    <td>20 cones</td>
+                    <td><span class="badge material" style="color:#f87171">Low Stock</span></td>
+                </tr>
+                <tr>
+                    <td>MAT-BTN-03</td>
+                    <td>Metal Zippers</td>
+                    <td>Accessories</td>
+                    <td>5000 pcs</td>
+                    <td><span class="badge completed" style="color:#34d399">Great Stock</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

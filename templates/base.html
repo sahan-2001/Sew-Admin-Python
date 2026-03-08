@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sew-Admin - {% block title %}Apparel ERP Dashboard{% endblock %}</title>
+    <!-- Modern Typography: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body class="dark-mode">
+
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <a href="/" style="text-decoration: none;">
+            <div class="navbar-brand">
+                <div class="logo-icon"><i class="fa-solid fa-shirt"></i></div>
+                <span class="logo-text">Sew-Admin ERP</span>
+            </div>
+        </a>
+        <div class="navbar-menu">
+            <a href="/" class="nav-item {% block nav_dashboard %}{% endblock %}"><i class="fa-solid fa-house"></i>
+                Dashboard</a>
+
+            <!-- Site Selector -->
+            <div class="dropdown">
+                <button class="nav-item dropbtn" style="background:transparent; border:none; cursor:pointer;"
+                    id="siteSelectorBtn">
+                    <i class="fa-solid fa-location-dot"></i> <span id="currentSite">Head Office</span> <i
+                        class="fa-solid fa-chevron-down" style="font-size:0.8rem"></i>
+                </button>
+                <div class="dropdown-content glass" id="siteDropdown">
+                    <a href="#" onclick="changeSite('Head Office')">Head Office</a>
+                    <a href="#" onclick="changeSite('Factory 1')">Factory 1</a>
+                    <a href="#" onclick="changeSite('Warehouse 1')">Warehouse 1</a>
+                    <a href="#" onclick="changeSite('Warehouse 2')">Warehouse 2</a>
+                </div>
+            </div>
+
+            <!-- Theme Toggler -->
+            <div class="dropdown">
+                <button class="nav-item dropbtn" style="background:transparent; border:none; cursor:pointer;">
+                    <i class="fa-solid fa-circle-half-stroke"></i> Theme <i class="fa-solid fa-chevron-down"
+                        style="font-size:0.8rem"></i>
+                </button>
+                <div class="dropdown-content glass text-sm">
+                    <a href="#" onclick="setTheme('dark')"><i class="fa-solid fa-moon"></i> Dark</a>
+                    <a href="#" onclick="setTheme('light')"><i class="fa-solid fa-sun"></i> Light</a>
+                    <a href="#" onclick="setTheme('system')"><i class="fa-solid fa-desktop"></i> System</a>
+                </div>
+            </div>
+
+            <div class="dropdown">
+                <div class="user-profile nav-item dropbtn"
+                    style="cursor:pointer; padding-left:1.5rem; border-left:1px solid var(--border-glass);">
+                    <img src="https://ui-avatars.com/api/?name=Admin+User&background=2563eb&color=fff" alt="User"
+                        class="avatar">
+                    <span>Admin</span>
+                </div>
+                <!-- Top right corner hover account settings dropdown -->
+                <div class="dropdown-content glass text-sm"
+                    style="right:0; left:auto; min-width: 200px; padding: 10px;">
+                    <div style="padding: 10px; border-bottom: 1px solid var(--border-glass); margin-bottom: 5px;">
+                        <strong style="color:var(--text-main);">admin / CEO</strong>
+                        <div style="color:var(--text-muted); font-size: 0.8rem; margin-top:2px;">root-admin@sewadmin.com
+                        </div>
+                    </div>
+                    <a href="/api/users/settings"><i class="fa-solid fa-user-gear"></i> Account Settings</a>
+                    <a href="/api/users/logs"><i class="fa-solid fa-clock-rotate-left"></i> Activity Logs</a>
+                    <a href="/api/users/logout" style="color:var(--danger);"><i
+                            class="fa-solid fa-arrow-right-from-bracket"></i> Sign Out</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar glass">
+            <h3 class="sidebar-title">Modules</h3>
+            <ul class="sidebar-nav">
+                <li><a href="/api/accounting/" class="{% block side_accounting %}{% endblock %}"><i
+                            class="fa-solid fa-scale-balanced"></i> Accounting</a></li>
+                <li><a href="/api/sales/" class="{% block side_sales %}{% endblock %}"><i
+                            class="fa-solid fa-money-check-dollar"></i> Sales & CRM</a></li>
+                <li><a href="/api/purchasing/" class="{% block side_purchasing %}{% endblock %}"><i
+                            class="fa-solid fa-cart-shopping"></i> Purchasing</a></li>
+                <li><a href="/api/inventory/" class="{% block side_inventory %}{% endblock %}"><i
+                            class="fa-solid fa-warehouse"></i> Inventory & WH</a></li>
+                <li><a href="/api/production/" class="{% block side_production %}{% endblock %}"><i
+                            class="fa-solid fa-industry"></i> Production</a></li>
+                <li><a href="/api/employees/" class="{% block side_employees %}{% endblock %}"><i
+                            class="fa-solid fa-id-card"></i> Workforce</a></li>
+                <li><a href="/api/reports/" class="{% block side_reports %}{% endblock %}"><i
+                            class="fa-solid fa-chart-line"></i> Reports</a></li>
+                <li><a href="/api/settings/" class="{% block side_settings %}{% endblock %}"><i
+                            class="fa-solid fa-gear"></i> System Settings</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <script>
+        // Site Selection Logic
+        function changeSite(siteName) {
+            document.getElementById('currentSite').innerText = siteName;
+            localStorage.setItem('selectedSite', siteName);
+        }
+
+        // Theme Selection Logic
+        function setTheme(theme) {
+            localStorage.setItem('theme', theme);
+            applyTheme(theme);
+        }
+
+        function applyTheme(theme) {
+            if (theme === 'system') {
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                document.body.className = prefersDark ? 'dark-mode' : 'light-mode';
+            } else {
+                document.body.className = theme + '-mode';
+            }
+        }
+
+        // Initialize Settings
+        document.addEventListener("DOMContentLoaded", () => {
+            let savedSite = localStorage.getItem('selectedSite') || 'Head Office';
+            changeSite(savedSite);
+
+            let savedTheme = localStorage.getItem('theme') || 'system';
+            applyTheme(savedTheme);
+        });
+    </script>
+
+</body>
+
+</html>

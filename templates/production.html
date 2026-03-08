@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Production{% endblock %}
+{% block side_production %}active{% endblock %}
+
+{% block content %}
+<header class="content-header">
+    <div>
+        <h1>Production Management</h1>
+        <p class="subtitle">Track garment manufacturing stages: Cutting, Sewing, Finishing, QC.</p>
+    </div>
+    <button class="btn btn-primary glass-btn"><i class="fa-solid fa-industry"></i> Plan Production</button>
+</header>
+<div class="data-panel glass">
+    <div class="panel-header">
+        <h3>Live Floor Tracking</h3>
+    </div>
+    <div class="table-responsive">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Order Ref</th>
+                    <th>Current Stage</th>
+                    <th>Line Assigned</th>
+                    <th>Target Speed</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>ORD-001</td>
+                    <td>Sewing</td>
+                    <td>Line A</td>
+                    <td>300 pcs/hour</td>
+                    <td><span class="badge in-progress">In Progress</span></td>
+                </tr>
+                <tr>
+                    <td>ORD-002</td>
+                    <td>Cutting</td>
+                    <td>Cutting Dept</td>
+                    <td>-</td>
+                    <td><span class="badge cutting">To-Do</span></td>
+                </tr>
+                <tr>
+                    <td>ORD-003</td>
+                    <td>Quality Check</td>
+                    <td>QC-Table 2</td>
+                    <td>-</td>
+                    <td><span class="badge material" style="color:#fbbf24; border-color:#fbbf24;">Inspecting</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

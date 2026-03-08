@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Employees{% endblock %}
+{% block side_employees %}active{% endblock %}
+
+{% block content %}
+<header class="content-header">
+    <div>
+        <h1>Employee Management</h1>
+        <p class="subtitle">Workforce records and line assignments.</p>
+    </div>
+    <button class="btn btn-primary glass-btn"><i class="fa-solid fa-id-card"></i> Add Employee</button>
+</header>
+<div class="data-panel glass">
+    <div class="panel-header">
+        <h3>Factory Workforce</h3>
+    </div>
+    <div class="table-responsive">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Emp ID</th>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>Current Line</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>EMP-1001</td>
+                    <td>Kamal P.</td>
+                    <td>Tailor (Sewing)</td>
+                    <td>Line A</td>
+                    <td><a href="#" class="view-all">View</a></td>
+                </tr>
+                <tr>
+                    <td>EMP-1002</td>
+                    <td>Nimal S.</td>
+                    <td>Supervisor</td>
+                    <td>Line A</td>
+                    <td><a href="#" class="view-all">View</a></td>
+                </tr>
+                <tr>
+                    <td>EMP-1003</td>
+                    <td>Saman W.</td>
+                    <td>QC Inspector</td>
+                    <td>QC Table 2</td>
+                    <td><a href="#" class="view-all">View</a></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

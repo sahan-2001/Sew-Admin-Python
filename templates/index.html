@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block nav_dashboard %}active{% endblock %}
+
+{% block content %}
+<header class="content-header">
+    <div>
+        <h1>Welcome back, Admin</h1>
+        <p class="subtitle">Here is what's happening with your apparel production today.</p>
+    </div>
+    <button class="btn btn-primary glass-btn"><i class="fa-solid fa-plus"></i> New Order</button>
+</header>
+
+<!-- Stats Overview -->
+<div class="stats-grid">
+    <div class="stat-card glass hover-effect">
+        <div class="stat-icon" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa;"><i
+                class="fa-solid fa-chart-pie"></i></div>
+        <div class="stat-details">
+            <span class="stat-title">Total Orders</span>
+            <h2 class="stat-value">1,248</h2>
+            <span class="stat-change positive"><i class="fa-solid fa-arrow-trend-up"></i> +12.5%</span>
+        </div>
+    </div>
+    <div class="stat-card glass hover-effect">
+        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.2); color: #34d399;"><i
+                class="fa-solid fa-industry"></i></div>
+        <div class="stat-details">
+            <span class="stat-title">In Production</span>
+            <h2 class="stat-value">458</h2>
+            <span class="stat-change negative"><i class="fa-solid fa-arrow-trend-down"></i> -2.4%</span>
+        </div>
+    </div>
+    <div class="stat-card glass hover-effect">
+        <div class="stat-icon" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24;"><i
+                class="fa-solid fa-boxes-stacked"></i></div>
+        <div class="stat-details">
+            <span class="stat-title">Low Stock Mats</span>
+            <h2 class="stat-value">12</h2>
+            <span class="warning-text">Immediate restock needed</span>
+        </div>
+    </div>
+    <div class="stat-card glass hover-effect">
+        <div class="stat-icon" style="background: rgba(139, 92, 246, 0.2); color: #a78bfa;"><i
+                class="fa-solid fa-file-invoice-dollar"></i></div>
+        <div class="stat-details">
+            <span class="stat-title">Monthly Revenue</span>
+            <h2 class="stat-value">$84,200</h2>
+            <span class="stat-change positive"><i class="fa-solid fa-arrow-trend-up"></i> +8.1%</span>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity Section -->
+<div class="dashboard-grid">
+    <!-- Data Table -->
+    <div class="data-panel glass">
+        <div class="panel-header">
+            <h3>Recent Production Orders</h3>
+            <a href="/api/orders/" class="view-all">View All</a>
+        </div>
+        <div class="table-responsive">
+            <table class="modern-table">
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Customer</th>
+                        <th>Product</th>
+                        <th>Progress</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>ORD-001</strong></td>
+                        <td>Zara Inc.</td>
+                        <td>Basic T-Shirt</td>
+                        <td>
+                            <div class="progress-bar">
+                                <div class="progress" style="width: 85%; background: #34d399;"></div>
+                            </div>
+                        </td>
+                        <td><span class="badge in-progress">Sewing</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>ORD-002</strong></td>
+                        <td>H&M Group</td>
+                        <td>Denim Jacket</td>
+                        <td>
+                            <div class="progress-bar">
+                                <div class="progress" style="width: 45%; background: #fbbf24;"></div>
+                            </div>
+                        </td>
+                        <td><span class="badge cutting">Cutting</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>ORD-003</strong></td>
+                        <td>Local Boutique</td>
+                        <td>Polo Shirt</td>
+                        <td>
+                            <div class="progress-bar">
+                                <div class="progress" style="width: 100%; background: #60a5fa;"></div>
+                            </div>
+                        </td>
+                        <td><span class="badge completed">Completed</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>ORD-004</strong></td>
+                        <td>Puma</td>
+                        <td>Sport Shorts</td>
+                        <td>
+                            <div class="progress-bar">
+                                <div class="progress" style="width: 15%; background: #f87171;"></div>
+                            </div>
+                        </td>
+                        <td><span class="badge material">Material Prep</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- API Connectivity Status -->
+    <div class="api-panel glass">
+        <div class="panel-header">
+            <h3>System Status</h3>
+            <div class="live-indicator">
+                <span class="pulse"></span>
+                Live
+            </div>
+        </div>
+        <div class="status-list">
+            <div class="status-item">
+                <div class="status-info">
+                    <i class="fa-solid fa-database text-blue"></i>
+                    <span>FastAPI Backend</span>
+                </div>
+                <span class="badge online">Online</span>
+            </div>
+            <div class="status-item">
+                <div class="status-info">
+                    <i class="fa-solid fa-server text-green"></i>
+                    <span>Database</span>
+                </div>
+                <span class="badge online">Connected</span>
+            </div>
+            <div class="status-item">
+                <div class="status-info">
+                    <i class="fa-solid fa-shield-halved text-purple"></i>
+                    <span>JWT Auth</span>
+                </div>
+                <span class="badge online">Active</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

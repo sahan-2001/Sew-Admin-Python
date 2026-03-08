@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block side_reports %}active{% endblock %}
+
+{% block content %}
+<header class="content-header">
+    <div>
+        <h1>Reporting & Analytics</h1>
+        <p class="subtitle">Production status, inventory overviews, and financial insights.</p>
+    </div>
+    <button class="btn btn-primary glass-btn"><i class="fa-solid fa-download"></i> Export Data</button>
+</header>
+<div class="stats-grid">
+    <div class="stat-card glass hover-effect">
+        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.2); color: #34d399;"><i
+                class="fa-solid fa-file-excel"></i></div>
+        <div class="stat-details">
+            <span class="stat-title">Production Report</span>
+            <span class="view-all" style="cursor: pointer; margin-top: 5px;">Generate &rarr;</span>
+        </div>
+    </div>
+    <div class="stat-card glass hover-effect">
+        <div class="stat-icon" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa;"><i
+                class="fa-solid fa-file-lines"></i></div>
+        <div class="stat-details">
+            <span class="stat-title">Inventory Report</span>
+            <span class="view-all" style="cursor: pointer; margin-top: 5px;">Generate &rarr;</span>
+        </div>
+    </div>
+    <div class="stat-card glass hover-effect">
+        <div class="stat-icon" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24;"><i
+                class="fa-solid fa-chart-column"></i></div>
+        <div class="stat-details">
+            <span class="stat-title">Order Status Report</span>
+            <span class="view-all" style="cursor: pointer; margin-top: 5px;">Generate &rarr;</span>
+        </div>
+    </div>
+    <div class="stat-card glass hover-effect">
+        <div class="stat-icon" style="background: rgba(139, 92, 246, 0.2); color: #a78bfa;"><i
+                class="fa-solid fa-money-bill-wave"></i></div>
+        <div class="stat-details">
+            <span class="stat-title">Financial Report</span>
+            <span class="view-all" style="cursor: pointer; margin-top: 5px;">Generate &rarr;</span>
+        </div>
+    </div>
+</div>
+{% endblock %}

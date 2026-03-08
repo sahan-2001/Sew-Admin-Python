@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Orders{% endblock %}
+{% block side_orders %}active{% endblock %}
+
+{% block content %}
+<header class="content-header">
+    <div>
+        <h1>Order Management</h1>
+        <p class="subtitle">Track garment orders, quantities, and delivery dates.</p>
+    </div>
+    <button class="btn btn-primary glass-btn"><i class="fa-solid fa-file-invoice"></i> Create Order</button>
+</header>
+<div class="data-panel glass">
+    <div class="panel-header">
+        <h3>All Orders</h3>
+    </div>
+    <div class="table-responsive">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Customer</th>
+                    <th>Product</th>
+                    <th>Qty</th>
+                    <th>Delivery Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>ORD-001</td>
+                    <td>Zara Inc.</td>
+                    <td>Basic T-Shirt</td>
+                    <td>5000</td>
+                    <td>10 July 2026</td>
+                    <td><span class="badge in-progress">In Production</span></td>
+                </tr>
+                <tr>
+                    <td>ORD-002</td>
+                    <td>H&M Group</td>
+                    <td>Denim Jacket</td>
+                    <td>1200</td>
+                    <td>15 August 2026</td>
+                    <td><span class="badge material">Awaiting Material</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

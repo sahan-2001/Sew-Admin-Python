@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Suppliers{% endblock %}
+{% block side_suppliers %}active{% endblock %}
+
+{% block content %}
+<header class="content-header">
+    <div>
+        <h1>Supplier Management</h1>
+        <p class="subtitle">Manage raw material vendors and fabric suppliers.</p>
+    </div>
+    <button class="btn btn-primary glass-btn"><i class="fa-solid fa-truck-field"></i> Add Supplier</button>
+</header>
+<div class="data-panel glass">
+    <div class="panel-header">
+        <h3>Registered Suppliers</h3>
+    </div>
+    <div class="table-responsive">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Supplier ID</th>
+                    <th>Supplier Name</th>
+                    <th>Provided Material</th>
+                    <th>Contact Phone</th>
+                    <th>Reliability Score</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>SUP-001</td>
+                    <td>ABC Fabrics Ltd.</td>
+                    <td>Fabric (Cotton, Poly)</td>
+                    <td>+94 112 555 123</td>
+                    <td><span style="color: #fbbf24;"><i class="fa-solid fa-star"></i> 4.8</span></td>
+                </tr>
+                <tr>
+                    <td>SUP-002</td>
+                    <td>Thread Lanka</td>
+                    <td>Thread, Buttons</td>
+                    <td>+94 112 555 124</td>
+                    <td><span style="color: #fbbf24;"><i class="fa-solid fa-star"></i> 4.5</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

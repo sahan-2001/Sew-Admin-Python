@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Customers{% endblock %}
+{% block side_customers %}active{% endblock %}
+
+{% block content %}
+<header class="content-header">
+    <div>
+        <h1>Customer Management</h1>
+        <p class="subtitle">Manage buyers, clients, and contact information.</p>
+    </div>
+    <button class="btn btn-primary glass-btn"><i class="fa-solid fa-plus"></i> Add Customer</button>
+</header>
+<div class="data-panel glass">
+    <div class="panel-header">
+        <h3>Customer List</h3>
+    </div>
+    <div class="table-responsive">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Company</th>
+                    <th>Phone</th>
+                    <th>Email</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>CUS-001</td>
+                    <td>Zara Inc.</td>
+                    <td>Zara Global</td>
+                    <td>+1 555-0100</td>
+                    <td>contact@zara.com</td>
+                    <td><a href="#" class="view-all"><i class="fa-solid fa-pen-to-square"></i> Edit</a></td>
+                </tr>
+                <tr>
+                    <td>CUS-002</td>
+                    <td>H&M Group</td>
+                    <td>Hennes & Mauritz</td>
+                    <td>+44 800-0200</td>
+                    <td>orders@hm.com</td>
+                    <td><a href="#" class="view-all"><i class="fa-solid fa-pen-to-square"></i> Edit</a></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
