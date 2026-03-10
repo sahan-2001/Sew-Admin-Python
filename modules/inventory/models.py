@@ -20,6 +20,7 @@ class Item(Base):
     category = Column(String(50)) # Fabric, Thread, Completed Garment
     base_uom = Column(String(20)) # meters, cones, pcs
     is_active = Column(Boolean, default=True)
+    qty_on_hand = Column(Float, default=0.0) # Global total qty across all locations
 
 class LocationType(str, enum.Enum):
     ARRIVAL = "Arrival"

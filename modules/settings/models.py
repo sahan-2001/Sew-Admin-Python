@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean
+from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey
 from core.database import Base
 
 class Currency(Base):
@@ -38,3 +38,14 @@ class PaymentMethod(Base):
     __tablename__ = "payment_methods"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(50)) # e.g. Bank Transfer, Cash, Card
+
+class ItemCategory(Base):
+    __tablename__ = "item_categories"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), unique=True, index=True)
+
+class ItemSubCategory(Base):
+    __tablename__ = "item_sub_categories"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), index=True)
+    category_id = Column(Integer, ForeignKey("item_categories.id"))

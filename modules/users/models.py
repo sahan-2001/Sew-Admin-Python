@@ -27,7 +27,7 @@ class User(Base):
     
     # Encrypt PII data directly in the database
     email = Column(StringEncryptedType(String, secret_key, FernetEngine, length=255))
-    phone = Column(StringEncryptedType(String, secret_key, FernetEngine, length=50))
+    phone = Column(StringEncryptedType(String, secret_key, FernetEngine, length=255))
     
     hashed_password = Column(String(255))
     role = Column(Enum(UserRole), default=UserRole.WORKER)

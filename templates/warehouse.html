@@ -1,0 +1,456 @@
+{% extends "base.html" %}
+{% block title %}Warehouse Operations{% endblock %}
+{% block side_inventory %}active{% endblock %}
+
+{% block content %}
+<header class="content-header">
+    <div>
+        <h1>Warehouse Operations</h1>
+        <p class="subtitle">Manage arrivals, shipments, picking, and physical stock counts.</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <button class="btn btn-primary glass-btn" onclick="openModal('arrivalModal')">
+            <i class="fa-solid fa-arrow-right-to-bracket"></i> Receive Stock
+        </button>
+        <button class="btn glass-btn" style="background:#8b5cf6; color:white; border:none;"
+            onclick="openModal('transferModal')">
+            <i class="fa-solid fa-right-left"></i> Transfer Stock
+        </button>
+        <button class="btn glass-btn" style="background:var(--danger); color:white; border:none;"
+            onclick="openModal('shipmentModal')">
+            <i class="fa-solid fa-truck-fast"></i> Ship / Remove
+        </button>
+    </div>
+</header>
+
+<!-- Action Dashboard -->
+<div class="stats-grid" style="margin-bottom: 2rem;">
+    <div class="stat-card glass" onclick="openModal('pickModal')" style="cursor:pointer;">
+        <div class="stat-icon" style="background: rgba(59, 130, 246, 0.2); color: #3b82f6;">
+            <i class="fa-solid fa-hand-holding-hand"></i>
+        </div>
+        <div class="stat-info">
+            <h3>Pick Items</h3>
+            <p>Reserve for Production / Sales</p>
+        </div>
+    </div>
+
+    <div class="stat-card glass" onclick="openModal('countModal')" style="cursor:pointer;">
+        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">
+            <i class="fa-solid fa-clipboard-check"></i>
+        </div>
+        <div class="stat-info">
+            <h3>Physical Count</h3>
+            <p>Adjust cyclic inventory mismatches</p>
+        </div>
+    </div>
+
+    <div class="stat-card glass" onclick="openModal('locationModal')" style="cursor:pointer;">
+        <div class="stat-icon" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;">
+            <i class="fa-solid fa-boxes-stacked"></i>
+        </div>
+        <div class="stat-info">
+            <h3>Manage Locations</h3>
+            <p>Setup bins (arrival, picking) & Warehouses</p>
+        </div>
+    </div>
+</div>
+
+<!-- Stock Reports View -->
+<div class="stats-grid" style="margin-bottom: 2rem;">
+    <div class="stat-card glass form-group"
+        style="grid-column: span 3; display: flex; align-items: end; gap: 10px; margin-bottom:0;">
+        <div style="flex:1">
+            <label>Item ID to Check Stock Reports</label>
+            <input type="number" id="qry_item" placeholder="E.g., 1" />
+        </div>
+        <div style="flex:1">
+            <label>Location ID (Optional)</label>
+            <input type="number" id="qry_loc" placeholder="E.g., 2" />
+        </div>
+        <button class="btn btn-primary" style="height:44px;" onclick="queryStock()">Check Stock</button>
+    </div>
+</div>
+
+<div class="data-panel glass">
+    <div class="panel-header">
+        <h3>Recent Stock Movements</h3>
+    </div>
+    <div class="table-responsive">
+        <table class="modern-table" id="warehouseTable">
+            <thead>
+                <tr>
+                    <th>Ref ID</th>
+                    <th>Type</th>
+                    <th>Item SKU</th>
+                    <th>Location ID</th>
+                    <th>Quantity</th>
+                    <th>Reference</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Populated dynamically via JS -->
+                <tr>
+                    <td colspan="6" style="text-align: center; color: var(--text-muted)">Connect database to load
+                        journals...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal CSS embedded for operations -->
+<style>
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(4px);
+    }
+
+    .modal-content {
+        background: var(--bg-card);
+        padding: 2rem;
+        border-radius: 1rem;
+        width: 400px;
+        border: 1px solid var(--border-glass);
+    }
+
+    .close-modal {
+        float: right;
+        cursor: pointer;
+        font-size: 1.5rem;
+        color: var(--text-muted);
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--border-glass);
+        background: var(--bg-body);
+        color: var(--text-main);
+        border-radius: 0.5rem;
+    }
+</style>
+
+<!-- Arrival Modal -->
+<div id="arrivalModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal('arrivalModal')">&times;</span>
+        <h2><i class="fa-solid fa-arrow-right-to-bracket"></i> Add Stock</h2>
+        <br>
+        <div class="form-group">
+            <label>Item ID</label>
+            <input type="number" id="arr_item" placeholder="e.g. 1" />
+        </div>
+        <div class="form-group">
+            <label>Location ID (ARRIVAL bin)</label>
+            <input type="number" id="arr_loc" placeholder="e.g. 2" />
+        </div>
+        <div class="form-group">
+            <label>Quantity</label>
+            <input type="number" step="0.01" id="arr_qty" placeholder="e.g. 100.5" />
+        </div>
+        <div class="form-group">
+            <label>Reference (PO / GRN)</label>
+            <input type="text" id="arr_ref" placeholder="PO-12345" />
+        </div>
+        <button class="btn btn-primary" style="width:100%"
+            onclick="submitOperation('/api/warehouse/stock/add', 'arr_item', 'arr_loc', 'arr_qty', 'arr_ref')">Submit
+            Arrival</button>
+    </div>
+</div>
+
+<!-- Transfer Modal -->
+<div id="transferModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal('transferModal')">&times;</span>
+        <h2><i class="fa-solid fa-right-left"></i> Transfer Stock</h2>
+        <br>
+        <div class="form-group">
+            <label>Item ID</label>
+            <input type="number" id="trf_item" />
+        </div>
+        <div class="form-group">
+            <label>From Location ID (Source Bin)</label>
+            <input type="number" id="trf_from" />
+        </div>
+        <div class="form-group">
+            <label>To Location ID (Target Bin)</label>
+            <input type="number" id="trf_to" />
+        </div>
+        <div class="form-group">
+            <label>Quantity</label>
+            <input type="number" step="0.01" id="trf_qty" />
+        </div>
+        <div class="form-group">
+            <label>Reference</label>
+            <input type="text" id="trf_ref" placeholder="Internal movement" />
+        </div>
+        <button class="btn" style="width:100%; background:#8b5cf6; color:white;" onclick="submitTransfer()">Execute
+            Transfer</button>
+    </div>
+</div>
+
+<!-- Shipment Modal -->
+<div id="shipmentModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal('shipmentModal')">&times;</span>
+        <h2><i class="fa-solid fa-truck-fast"></i> Remove Stock</h2>
+        <br>
+        <div class="form-group">
+            <label>Item ID</label>
+            <input type="number" id="shp_item" />
+        </div>
+        <div class="form-group">
+            <label>Location ID</label>
+            <input type="number" id="shp_loc" />
+        </div>
+        <div class="form-group">
+            <label>Quantity</label>
+            <input type="number" step="0.01" id="shp_qty" />
+        </div>
+        <div class="form-group">
+            <label>Reference (SO / Dispatch)</label>
+            <input type="text" id="shp_ref" />
+        </div>
+        <button class="btn" style="width:100%; background:var(--danger); color:white;"
+            onclick="submitOperation('/api/warehouse/stock/remove', 'shp_item', 'shp_loc', 'shp_qty', 'shp_ref')">Submit
+            Shipment</button>
+    </div>
+</div>
+
+<!-- Pick Modal -->
+<div id="pickModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal('pickModal')">&times;</span>
+        <h2><i class="fa-solid fa-hand-holding-hand"></i> Pick Items</h2>
+        <br>
+        <div class="form-group">
+            <label>Item ID</label>
+            <input type="number" id="pck_item" />
+        </div>
+        <div class="form-group">
+            <label>Location ID (PICKING bin)</label>
+            <input type="number" id="pck_loc" />
+        </div>
+        <div class="form-group">
+            <label>Quantity</label>
+            <input type="number" step="0.01" id="pck_qty" />
+        </div>
+        <div class="form-group">
+            <label>Reference (Prod. Order)</label>
+            <input type="text" id="pck_ref" />
+        </div>
+        <button class="btn btn-primary" style="width:100%"
+            onclick="submitOperation('/api/warehouse/stock/pick', 'pck_item', 'pck_loc', 'pck_qty', 'pck_ref')">Pick
+            Items</button>
+    </div>
+</div>
+
+<!-- Physical Count Modal -->
+<div id="countModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal('countModal')">&times;</span>
+        <h2><i class="fa-solid fa-clipboard-check"></i> Physical Count</h2>
+        <br>
+        <div class="form-group">
+            <label>Item ID</label>
+            <input type="number" id="cnt_item" />
+        </div>
+        <div class="form-group">
+            <label>Location ID</label>
+            <input type="number" id="cnt_loc" />
+        </div>
+        <div class="form-group">
+            <label>Counted Quantity (Actual physically on shelf)</label>
+            <input type="number" step="0.01" id="cnt_qty" />
+        </div>
+        <div class="form-group">
+            <label>Reference (Cycle Count ID)</label>
+            <input type="text" id="cnt_ref" />
+        </div>
+        <button class="btn" style="width:100%; background:#10b981; color:white;" onclick="submitPhysicalCount()">Adjust
+            Stock</button>
+    </div>
+</div>
+
+<!-- Manage Location/Warehouse Modal -->
+<div id="locationModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal('locationModal')">&times;</span>
+        <h2><i class="fa-solid fa-folder-tree"></i> Create Location</h2>
+        <br>
+        <div class="form-group">
+            <label>Parent Warehouse ID</label>
+            <input type="number" id="loc_wh" placeholder="e.g. 1" />
+        </div>
+        <div class="form-group">
+            <label>Location Name/Bin</label>
+            <input type="text" id="loc_name" placeholder="Aisle A - Bin 1" />
+        </div>
+        <div class="form-group">
+            <label>Location Type</label>
+            <select id="loc_type">
+                <option value="arrival">Arrival (Receiving)</option>
+                <option value="picking">Picking (Outbound)</option>
+                <option value="shipment">Shipment (Dispatch)</option>
+            </select>
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="submitLocation()">Create Location</button>
+        <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-glass);">
+        <h2><i class="fa-solid fa-building"></i> Or Create New Warehouse Site</h2>
+        <br>
+        <div class="form-group">
+            <input type="text" id="wh_name" placeholder="Warehouse Name (e.g. Factory 2)" />
+        </div>
+        <button class="btn glass-btn" style="width:100%" onclick="submitWarehouse()">Setup Warehouse</button>
+    </div>
+</div>
+
+<script>
+    function openModal(id) {
+        document.getElementById(id).style.display = 'flex';
+    }
+    function closeModal(id) {
+        document.getElementById(id).style.display = 'none';
+        // Clear inputs inside modal
+        const inputs = document.getElementById(id).querySelectorAll('input');
+        inputs.forEach(i => i.value = '');
+    }
+
+    async function submitOperation(url, item_id, loc_id, qty_id, ref_id) {
+        const payload = {
+            item_id: parseInt(document.getElementById(item_id).value),
+            location_id: parseInt(document.getElementById(loc_id).value),
+            qty: parseFloat(document.getElementById(qty_id).value),
+            reference: document.getElementById(ref_id).value || "MANUAL_ENTRY"
+        };
+
+        try {
+            const res = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                alert("Error: " + (data.detail || "Transaction failed."));
+            } else {
+                alert("Success! Journal ID: " + data.id + "\nType: " + data.journal_type);
+                location.reload();
+            }
+        } catch (e) {
+            alert("Network error.");
+        }
+    }
+
+    async function submitPhysicalCount() {
+        const payload = {
+            item_id: parseInt(document.getElementById('cnt_item').value),
+            location_id: parseInt(document.getElementById('cnt_loc').value),
+            counted_qty: parseFloat(document.getElementById('cnt_qty').value),
+            reference: document.getElementById('cnt_ref').value || "SYSTEM_COUNT"
+        };
+
+        try {
+            const res = await fetch('/api/warehouse/stock/physical-count', {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                alert("Error: " + (data.detail || "Transaction failed."));
+            } else {
+                alert("Success! System Qty was: " + data.system_qty + "\nAdjustment applied: " + data.adjustment_qty);
+                location.reload();
+            }
+        } catch (e) {
+            alert("Network error.");
+        }
+    }
+
+    async function submitTransfer() {
+        const payload = {
+            item_id: parseInt(document.getElementById('trf_item').value),
+            from_location_id: parseInt(document.getElementById('trf_from').value),
+            to_location_id: parseInt(document.getElementById('trf_to').value),
+            qty: parseFloat(document.getElementById('trf_qty').value),
+            reference: document.getElementById('trf_ref').value || "SYS_TRANSFER"
+        };
+        try {
+            const res = await fetch('/api/warehouse/stock/transfer', {
+                method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (!res.ok) alert("Error: " + (data.detail || "Transaction failed."));
+            else { alert("Success! Transfer Executed."); location.reload(); }
+        } catch (e) { alert("Network error."); }
+    }
+
+    async function submitLocation() {
+        const payload = {
+            warehouse_id: parseInt(document.getElementById('loc_wh').value),
+            name: document.getElementById('loc_name').value,
+            location_type: document.getElementById('loc_type').value,
+            description: ""
+        };
+        try {
+            const res = await fetch('/api/warehouse/locations', {
+                method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (!res.ok) alert("Error: " + (data.detail || "Transaction failed."));
+            else { alert("Location '" + data.name + "' Created successfully!"); location.reload(); }
+        } catch (e) { alert("Network error."); }
+    }
+
+    async function submitWarehouse() {
+        try {
+            const res = await fetch('/api/warehouse/warehouses', {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: document.getElementById('wh_name').value })
+            });
+            const data = await res.json();
+            if (!res.ok) alert("Error: " + (data.detail || "Failed"));
+            else { alert("Warehouse ID " + data.id + " Built!"); location.reload(); }
+        } catch (e) { }
+    }
+
+    async function queryStock() {
+        const id = document.getElementById('qry_item').value;
+        const loc = document.getElementById('qry_loc').value;
+        if (!id) return alert("Item ID required!");
+        let url = '/api/warehouse/stock/query?item_id=' + id;
+        if (loc) url += '&location_id=' + loc;
+
+        try {
+            const res = await fetch(url);
+            const data = await res.json();
+            if (!res.ok) alert("Error: " + data.detail);
+            else alert("Query Result\n\nItem ID: " + data.item_id + "\nTotal In Stock: " + data.qty_on_hand);
+        } catch (e) { alert("Network Error"); }
+    }
+</script>
+
+{% endblock %}

@@ -1,0 +1,386 @@
+{% extends "base.html" %}
+{% block title %}System Settings{% endblock %}
+{% block side_settings %}active{% endblock %}
+
+{% block content %}
+<header class="content-header">
+    <div>
+        <h1>System Settings</h1>
+        <p class="subtitle">Configure master data like Currencies, Sites, Terms, and UOM.</p>
+    </div>
+</header>
+
+<div class="tabs-container glass" style="padding: 20px; border-radius: 12px;">
+    <div
+        style="display: flex; gap: 15px; border-bottom: 1px solid var(--border-glass); padding-bottom: 10px; margin-bottom: 20px;">
+        <button class="tab-btn active" onclick="switchTab('sites')">Sites & Locations</button>
+        <button class="tab-btn" onclick="switchTab('currencies')">Currencies</button>
+        <button class="tab-btn" onclick="switchTab('terms')">Payment Terms & Methods</button>
+        <button class="tab-btn" onclick="switchTab('delivery')">Delivery Terms</button>
+        <button class="tab-btn" onclick="switchTab('vat')">VAT & Taxes</button>
+        <button class="tab-btn" onclick="switchTab('categories')">Categories</button>
+    </div>
+
+    <!-- Sites Tab -->
+    <div id="sites" class="tab-content active">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3>Company Sites</h3>
+            <button class="btn btn-primary glass-btn btn-sm"><i class="fa-solid fa-plus"></i> Add Site</button>
+        </div>
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Site Name</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>Head Office</td>
+                    <td class="action-cell"><button class="icon-btn edit-btn"><i
+                                class="fa-solid fa-pen"></i></button><button class="icon-btn danger-btn"><i
+                                class="fa-solid fa-trash"></i></button></td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Factory 1</td>
+                    <td class="action-cell"><button class="icon-btn edit-btn"><i
+                                class="fa-solid fa-pen"></i></button><button class="icon-btn danger-btn"><i
+                                class="fa-solid fa-trash"></i></button></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Currencies Tab -->
+    <div id="currencies" class="tab-content" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3>Currencies (Global System Currencies)</h3>
+            <button class="btn btn-primary glass-btn btn-sm"><i class="fa-solid fa-plus"></i> Add Currency</button>
+        </div>
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Symbol</th>
+                    <th>Global Default</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>USD</td>
+                    <td>US Dollar</td>
+                    <td>$</td>
+                    <td><i class="fa-solid fa-check text-green"></i></td>
+                    <td class="action-cell"><button class="icon-btn edit-btn"><i
+                                class="fa-solid fa-pen"></i></button><button class="icon-btn danger-btn"><i
+                                class="fa-solid fa-trash"></i></button></td>
+                </tr>
+                <tr>
+                    <td>LKR</td>
+                    <td>Sri Lankan Rupee</td>
+                    <td>Rs</td>
+                    <td><i class="fa-solid fa-xmark text-red"></i></td>
+                    <td class="action-cell"><button class="icon-btn edit-btn"><i
+                                class="fa-solid fa-pen"></i></button><button class="icon-btn danger-btn"><i
+                                class="fa-solid fa-trash"></i></button></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Other tabs (Terms, Delivery, VAT) follows similar structure -->
+    <div id="terms" class="tab-content" style="display: none;">
+        <h3>Payment Methods & Terms</h3>
+        <p>Manage NET 30, Cash On Delivery, Bank Transfers, etc.</p>
+    </div>
+
+    <div id="delivery" class="tab-content" style="display: none;">
+        <h3>Delivery Terms</h3>
+        <p>Manage FOB, CIF, EXW, etc.</p>
+    </div>
+
+    <div id="vat" class="tab-content" style="display: none;">
+        <h3>VAT Groups</h3>
+        <p>Manage Item VAT, Supplier VAT, and Customer Exemptions.</p>
+    </div>
+
+    <!-- Categories Tab -->
+    <div id="categories" class="tab-content" style="display: none;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <!-- Categories List -->
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3>Categories</h3>
+                    <button class="btn btn-primary glass-btn btn-sm" onclick="openModal('createCategoryModal')"><i
+                            class="fa-solid fa-plus"></i> Add Category</button>
+                </div>
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Category Name</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cat_tbody">
+                        <tr>
+                            <td colspan="3" style="text-align: center;">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Sub-Categories List -->
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3>Sub-Categories</h3>
+                    <button class="btn btn-primary glass-btn btn-sm" onclick="openCreateSubCategoryModal()"><i
+                            class="fa-solid fa-plus"></i> Add Sub-Category</button>
+                </div>
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Sub-Category Name</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="subcat_tbody">
+                        <tr>
+                            <td colspan="3" style="text-align: center;">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Create Category Modal -->
+<div id="createCategoryModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal('createCategoryModal')">&times;</span>
+        <h2><i class="fa-solid fa-plus"></i> Create Category</h2>
+        <br>
+        <div class="form-group">
+            <label>Category Name</label>
+            <input type="text" id="cat_name" />
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="submitCreateCategory()">Create Category</button>
+    </div>
+</div>
+
+<!-- Create Sub-Category Modal -->
+<div id="createSubCategoryModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal('createSubCategoryModal')">&times;</span>
+        <h2><i class="fa-solid fa-plus"></i> Create Sub-Category</h2>
+        <br>
+        <div class="form-group">
+            <label>Parent Category</label>
+            <select id="sc_parent_cat"></select>
+        </div>
+        <div class="form-group">
+            <label>Sub-Category Name</label>
+            <input type="text" id="sc_name" />
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="submitCreateSubCategory()">Create
+            Sub-Category</button>
+    </div>
+</div>
+
+
+<script>
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabId).style.display = 'block';
+        event.currentTarget.classList.add('active');
+    }
+</script>
+<style>
+    .tab-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 5px 10px;
+        font-weight: 500;
+    }
+
+    .tab-btn.active {
+        color: var(--primary);
+        border-bottom: 2px solid var(--primary);
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(4px);
+    }
+
+    .modal-content {
+        background: var(--bg-card);
+        padding: 2rem;
+        border-radius: 1rem;
+        width: 400px;
+        border: 1px solid var(--border-glass);
+    }
+
+    .close-modal {
+        float: right;
+        cursor: pointer;
+        font-size: 1.5rem;
+        color: var(--text-muted);
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--border-glass);
+        background: var(--bg-body);
+        color: var(--text-main);
+        border-radius: 0.5rem;
+    }
+</style>
+
+<script>
+    let categoriesList = [];
+
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    async function loadCategories() {
+        try {
+            const res = await fetch('/api/settings/categories');
+            categoriesList = await res.json();
+            const tbody = document.getElementById('cat_tbody');
+            tbody.innerHTML = '';
+            if (categoriesList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center">No categories found.</td></tr>';
+            } else {
+                categoriesList.forEach(c => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${c.id}</td>
+                            <td>${c.name}</td>
+                            <td class="action-cell">
+                                <button class="icon-btn danger-btn" onclick="deleteCategory(${c.id})"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+        } catch (e) { console.error("Error loading categories:", e); }
+    }
+
+    async function loadSubCategories() {
+        try {
+            const res = await fetch('/api/settings/sub-categories');
+            const data = await res.json();
+            const tbody = document.getElementById('subcat_tbody');
+            tbody.innerHTML = '';
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center">No sub-categories found.</td></tr>';
+            } else {
+                data.forEach(c => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${c.id}</td>
+                            <td>${c.name}</td>
+                            <td class="action-cell">
+                                <button class="icon-btn danger-btn" onclick="deleteSubCategory(${c.id})"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+        } catch (e) { console.error("Error loading sub-categories:", e); }
+    }
+
+    async function submitCreateCategory() {
+        const name = document.getElementById('cat_name').value;
+        if (!name) return alert("Please enter a category name");
+        try {
+            const res = await fetch('/api/settings/categories', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name })
+            });
+            if (!res.ok) alert("Error: " + (await res.json()).detail);
+            else { closeModal('createCategoryModal'); document.getElementById('cat_name').value = ''; loadCategories(); }
+        } catch (e) { alert("Network Error"); }
+    }
+
+    async function deleteCategory(id) {
+        if (!confirm("Are you sure?")) return;
+        try {
+            const res = await fetch('/api/settings/categories/' + id, { method: 'DELETE' });
+            if (!res.ok) alert("Error: " + (await res.json()).detail);
+            else { loadCategories(); loadSubCategories(); }
+        } catch (e) { alert("Network Error"); }
+    }
+
+    function openCreateSubCategoryModal() {
+        const select = document.getElementById('sc_parent_cat');
+        select.innerHTML = '<option value="">-- Select Parent --</option>';
+        categoriesList.forEach(c => {
+            select.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+        });
+        openModal('createSubCategoryModal');
+    }
+
+    async function submitCreateSubCategory() {
+        const parent_id = document.getElementById('sc_parent_cat').value;
+        const name = document.getElementById('sc_name').value;
+        if (!parent_id || !name) return alert("Please select parent and enter sub-category name");
+        try {
+            const res = await fetch('/api/settings/sub-categories', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name, category_id: parseInt(parent_id) })
+            });
+            if (!res.ok) alert("Error: " + (await res.json()).detail);
+            else { closeModal('createSubCategoryModal'); document.getElementById('sc_name').value = ''; loadSubCategories(); }
+        } catch (e) { alert("Network Error"); }
+    }
+
+    async function deleteSubCategory(id) {
+        if (!confirm("Are you sure?")) return;
+        try {
+            const res = await fetch('/api/settings/sub-categories/' + id, { method: 'DELETE' });
+            if (!res.ok) alert("Error: " + (await res.json()).detail);
+            else { loadSubCategories(); }
+        } catch (e) { alert("Network Error"); }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadCategories();
+        loadSubCategories();
+    });
+</script>
+{% endblock %}

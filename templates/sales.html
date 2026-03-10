@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Sales & CRM{% endblock %}
+{% block side_sales %}active{% endblock %}
+
+{% block content %}
+<header class="content-header">
+    <div>
+        <h1>Sales & CRM</h1>
+        <p class="subtitle">Manage Customers, Quotes, Sales Orders, and Invoicing.</p>
+    </div>
+    <button class="btn btn-primary glass-btn" onclick="openSalesModal()"><i class="fa-solid fa-plus"></i> Create Sales
+        Document</button>
+</header>
+
+<div class="data-panel glass">
+    <div class="panel-header">
+        <h3>Sales Records</h3>
+        <div class="filters">
+            <input type="text" placeholder="Search..." class="search-input">
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="modern-table" id="salesTable">
+            <thead>
+                <tr>
+                    <th>Doc ID</th>
+                    <th>Type</th>
+                    <th>Customer</th>
+                    <th>Date</th>
+                    <th>Total Value</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Dummy data for UI -->
+                <tr>
+                    <td><strong>SO-10023</strong></td>
+                    <td>Sales Order</td>
+                    <td>Zara Inc.</td>
+                    <td>2026-03-08</td>
+                    <td>$12,450.00</td>
+                    <td><span class="badge in-progress">Pending Approval</span></td>
+                    <td class="action-cell">
+                        <button class="icon-btn edit-btn" title="Edit" onclick="editRow('SO-10023')"><i
+                                class="fa-solid fa-pen"></i></button>
+                        <button class="icon-btn success-btn" title="Send to Approval"><i
+                                class="fa-solid fa-check"></i></button>
+                        <button class="icon-btn danger-btn" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>QT-00445</strong></td>
+                    <td>Quotation</td>
+                    <td>H&M Group</td>
+                    <td>2026-03-07</td>
+                    <td>$4,200.00</td>
+                    <td><span class="badge completed">Approved</span></td>
+                    <td class="action-cell">
+                        <button class="icon-btn edit-btn" title="Edit" onclick="editRow('QT-00445')"><i
+                                class="fa-solid fa-pen"></i></button>
+                        <button class="icon-btn primary-btn" title="Convert to Order"><i
+                                class="fa-solid fa-arrow-right-arrow-left"></i></button>
+                        <button class="icon-btn danger-btn" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>SO-10022</strong></td>
+                    <td>Sales Order</td>
+                    <td>Local Boutique</td>
+                    <td>2026-03-05</td>
+                    <td>$1,150.00</td>
+                    <td><span class="badge cutting">Released to Production</span></td>
+                    <td class="action-cell">
+                        <button class="icon-btn edit-btn" title="Edit" onclick="editRow('SO-10022')"><i
+                                class="fa-solid fa-pen"></i></button>
+                        <button class="icon-btn success-btn" title="Generate Invoice"><i
+                                class="fa-solid fa-file-invoice"></i></button>
+                        <button class="icon-btn danger-btn" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    function openSalesModal() {
+        alert("Opening Create Sales Modal...");
+    }
+    function editRow(id) {
+        alert("Editing Record: " + id);
+    }
+</script>
+{% endblock %}

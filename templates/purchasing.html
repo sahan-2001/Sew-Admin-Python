@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Purchasing{% endblock %}
+{% block side_purchasing %}active{% endblock %}
+
+{% block content %}
+<header class="content-header">
+    <div>
+        <h1>Purchasing</h1>
+        <p class="subtitle">Manage Purchase Orders, Suppliers, and Goods Receipts.</p>
+    </div>
+    <button class="btn btn-primary glass-btn" onclick="openPOModal()"><i class="fa-solid fa-plus"></i> Create
+        PO</button>
+</header>
+
+<div class="data-panel glass">
+    <div class="panel-header">
+        <h3>Purchase Orders</h3>
+        <div class="filters">
+            <input type="text" placeholder="Search..." class="search-input">
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="modern-table" id="poTable">
+            <thead>
+                <tr>
+                    <th>PO Number</th>
+                    <th>Supplier</th>
+                    <th>Issue Date</th>
+                    <th>Total Amount</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Dummy data for UI -->
+                <tr>
+                    <td><strong>PO-5011</strong></td>
+                    <td>Global Fabrics Ltd</td>
+                    <td>2026-03-08</td>
+                    <td>$5,600.00</td>
+                    <td><span class="badge in-progress">Draft</span></td>
+                    <td class="action-cell">
+                        <button class="icon-btn edit-btn" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                        <button class="icon-btn primary-btn" title="Release Order"><i
+                                class="fa-solid fa-paper-plane"></i></button>
+                        <button class="icon-btn danger-btn" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>PO-5010</strong></td>
+                    <td>Thread & Co.</td>
+                    <td>2026-03-06</td>
+                    <td>$450.00</td>
+                    <td><span class="badge cutting">Released</span></td>
+                    <td class="action-cell">
+                        <button class="icon-btn edit-btn" title="View"><i class="fa-solid fa-eye"></i></button>
+                        <button class="icon-btn success-btn" title="Register Arrival (GRN)"><i
+                                class="fa-solid fa-truck-ramp-box"></i></button>
+                        <button class="icon-btn danger-btn" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    function openPOModal() {
+        alert("Opening Create Purchase Order Modal...");
+    }
+</script>
+{% endblock %}

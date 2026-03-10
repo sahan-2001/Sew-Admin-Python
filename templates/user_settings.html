@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Account & Permissions Matrix{% endblock %}
+
+{% block content %}
+<header class="content-header">
+    <div>
+        <h1>Account Settings & Roles</h1>
+        <p class="subtitle">Manage user profiles, module access, and granular API permissions.</p>
+    </div>
+    <button class="btn btn-primary glass-btn"><i class="fa-solid fa-user-plus"></i> Add User</button>
+</header>
+
+<div class="dashboard-grid">
+    <!-- User Profile Settings -->
+    <div class="data-panel glass">
+        <div class="panel-header">
+            <h3>My Profile</h3>
+        </div>
+        <div style="padding: 20px;">
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label style="display:block; margin-bottom: 5px; color: var(--text-muted);">Username</label>
+                <input type="text" value="admin" disabled
+                    style="width: 100%; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.1); border: 1px solid var(--border-glass); color: var(--text-main);">
+            </div>
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label style="display:block; margin-bottom: 5px; color: var(--text-muted);">Email</label>
+                <input type="email" value="root-admin@sewadmin.com"
+                    style="width: 100%; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.1); border: 1px solid var(--border-glass); color: var(--text-main);">
+            </div>
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label style="display:block; margin-bottom: 5px; color: var(--text-muted);">Theme Preference</label>
+                <select
+                    style="width: 100%; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.1); border: 1px solid var(--border-glass); color: var(--text-main);">
+                    <option value="system">System Default</option>
+                    <option value="dark">Dark Theme</option>
+                    <option value="light">Light Theme</option>
+                </select>
+            </div>
+            <button class="btn btn-primary"><i class="fa-solid fa-save"></i> Save Profile</button>
+        </div>
+    </div>
+
+    <!-- System Users & Permissions Matrix -->
+    <div class="data-panel glass">
+        <div class="panel-header">
+            <h3>Users & Granular Access</h3>
+        </div>
+        <div class="table-responsive">
+            <table class="modern-table" style="font-size: 0.9rem;">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Role</th>
+                        <th>Module Permissions</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>admin</strong><br><small>admin@sewadmin.com</small></td>
+                        <td><span class="badge in-progress">Admin</span></td>
+                        <td><i class="fa-solid fa-star text-yellow"></i> Full Access</td>
+                        <td class="action-cell">
+                            <button class="icon-btn edit-btn" disabled><i class="fa-solid fa-pen"></i></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>sahan</strong><br><small>sales@sewadmin.com</small></td>
+                        <td><span class="badge material">Manager</span></td>
+                        <td>
+                            <div style="display:flex; gap: 5px; flex-wrap: wrap;">
+                                <span class="badge" style="background: rgba(255,255,255,0.1);">Sales: Read, Create,
+                                    Edit</span>
+                                <span class="badge" style="background: rgba(255,255,255,0.1);">Customers: Read,
+                                    Edit</span>
+                            </div>
+                        </td>
+                        <td class="action-cell">
+                            <button class="icon-btn edit-btn" title="Modify Permissions"><i
+                                    class="fa-solid fa-sliders"></i></button>
+                            <button class="icon-btn danger-btn"><i class="fa-solid fa-user-xmark"></i></button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

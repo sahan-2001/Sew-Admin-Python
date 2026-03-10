@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Activity Logs{% endblock %}
+
+{% block content %}
+<header class="content-header">
+    <div>
+        <h1>System Activity Logs</h1>
+        <p class="subtitle">Complete audit trail for the ERP.</p>
+    </div>
+    <button class="btn glass-btn"><i class="fa-solid fa-file-export"></i> Export CSV</button>
+</header>
+
+<div class="data-panel glass">
+    <div class="panel-header">
+        <h3>Audit Trail</h3>
+        <div class="filters">
+            <input type="date" class="search-input" style="padding: 5px;">
+            <input type="text" placeholder="Search logs..." class="search-input">
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>User</th>
+                    <th>Module</th>
+                    <th>Action</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Dummy output, this would normally be generated via Jinja or fetched via fetch("/api/users/activity-logs") -->
+                <tr>
+                    <td>2026-03-08 11:45:12</td>
+                    <td><strong>admin</strong></td>
+                    <td><span class="badge material" style="background:#4b5563;">users</span></td>
+                    <td><span class="badge in-progress"
+                            style="background: rgba(16, 185, 129, 0.2); color: #34d399;">login</span></td>
+                    <td>User logged in successfully</td>
+                </tr>
+                <tr>
+                    <td>2026-03-08 11:20:05</td>
+                    <td><strong>sahan</strong></td>
+                    <td><span class="badge material" style="background:#4b5563;">sales</span></td>
+                    <td><span class="badge in-progress"
+                            style="background: rgba(59, 130, 246, 0.2); color: #60a5fa;">update</span></td>
+                    <td>Changed SO-10022 Status to Released to Production</td>
+                </tr>
+                <tr>
+                    <td>2026-03-08 10:15:33</td>
+                    <td><strong>admin</strong></td>
+                    <td><span class="badge material" style="background:#4b5563;">purchasing</span></td>
+                    <td><span class="badge in-progress"
+                            style="background: rgba(245, 158, 11, 0.2); color: #fbbf24;">create</span></td>
+                    <td>Created Purchase Order PO-5011</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
