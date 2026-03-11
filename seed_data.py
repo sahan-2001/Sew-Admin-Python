@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from core.database import engine, Base
 from modules.users.models import User, Site, UserRole
 from modules.accounting.models import ChartOfAccount, AccountType
-from modules.inventory.models import Item
+from modules.inventory.models import InventoryItem as Item
 from core.security import get_password_hash
 from modules.settings.models import Currency, Country, VatGroup, DeliveryTerm, PaymentTerm, PaymentMethod
 

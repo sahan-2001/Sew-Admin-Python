@@ -247,7 +247,7 @@
         await loadItems();
     }
 
-    function updateSubCategories(prefix, catName) {
+    function updateSubCategories(prefix, catName, preSelectSubcat) {
         const subCatSelect = document.getElementById(prefix + '_sub_cat');
         subCatSelect.innerHTML = '<option value="">- Select Sub-Category -</option>';
         if (!catName) return;
@@ -259,6 +259,11 @@
         subs.forEach(sc => {
             subCatSelect.innerHTML += `<option value="${sc.name}">${sc.name}</option>`;
         });
+
+        // Pre-select the sub-category if provided (used when opening edit modal)
+        if (preSelectSubcat) {
+            subCatSelect.value = preSelectSubcat;
+        }
     }
 
     async function loadItems() {
@@ -298,20 +303,31 @@
 
     async function submitCreateItem() {
         const payload = {
-            sku: document.getElementById('ci_sku').value,
-            name: document.getElementById('ci_name').value,
+            sku: document.getElementById('ci_sku').value.trim(),
+            name: document.getElementById('ci_name').value.trim(),
             category: document.getElementById('ci_cat').value || null,
             sub_category: document.getElementById('ci_sub_cat').value || null,
-            base_uom: document.getElementById('ci_uom').value,
+            base_uom: document.getElementById('ci_uom').value.trim(),
             item_type: document.getElementById('ci_type').value,
-            description: document.getElementById('ci_desc').value
+            description: document.getElementById('ci_desc').value.trim()
         };
+        if (!payload.sku) return alert('SKU is required.');
+        if (!payload.name) return alert('Item name is required.');
+        if (!payload.base_uom) return alert('Unit of Measure is required.');
         try {
             const res = await fetch('/api/items/', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
             });
             if (!res.ok) alert("Error: " + (await res.json()).detail);
-            else { closeModal('createItemModal'); loadItems(); document.querySelectorAll('input').forEach(i => i.value = ''); }
+            else {
+                closeModal('createItemModal');
+                // Reset all fields properly
+                ['ci_sku','ci_name','ci_uom','ci_desc'].forEach(id => document.getElementById(id).value = '');
+                document.getElementById('ci_cat').value = '';
+                document.getElementById('ci_sub_cat').innerHTML = '<option value="">- Select Sub-Category -</option>';
+                document.getElementById('ci_type').value = 'inventory';
+                loadItems();
+            }
         } catch (e) { alert("Network Error"); }
     }
 
@@ -319,11 +335,16 @@
         document.getElementById('edit_item_id_label').innerText = id;
         document.getElementById('ei_id').value = id;
         document.getElementById('ei_name').value = name;
-        document.getElementById('ei_cat').value = cat === 'null' ? '' : cat;
-        updateSubCategories('ei', cat === 'null' ? '' : cat);
-        document.getElementById('ei_sub_cat').value = subcat === 'null' ? '' : subcat;
         document.getElementById('ei_uom').value = uom;
         document.getElementById('ei_desc').value = desc === 'null' ? '' : desc;
+
+        const catVal = cat === 'null' ? '' : cat;
+        const subcatVal = subcat === 'null' ? '' : subcat;
+
+        // Set category first, then populate sub-cats, then set sub-cat value
+        document.getElementById('ei_cat').value = catVal;
+        updateSubCategories('ei', catVal, subcatVal);
+
         openModal('editItemModal');
     }
 

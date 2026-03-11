@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from fastapi import HTTPException
-from modules.warehouse.models import Item, ItemType, ItemJournal, JournalType, InventoryLocation, Warehouse
+from modules.warehouse.models import WarehouseItem as Item, ItemType, WarehouseItemJournal as ItemJournal, JournalType, InventoryLocation, Warehouse
 from modules.items.schemas import ItemCreate, ItemUpdate, ItemStockResponse, StockLocationDetail
 
 class ItemService:

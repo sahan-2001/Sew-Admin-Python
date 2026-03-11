@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from modules.warehouse.models import (
-    Warehouse, InventoryLocation, Item, 
-    ItemJournal, PhysicalInventory, LocationType, JournalType
+    Warehouse, InventoryLocation, WarehouseItem, 
+    WarehouseItemJournal, PhysicalInventory, LocationType, JournalType
 )
 from sqlalchemy import func
 
@@ -30,8 +30,8 @@ class WarehouseOperationsService:
         self.db.refresh(loc)
         return loc
 
-    def create_item(self, sku: str, name: str, category: str, base_uom: str) -> Item:
-        item = Item(sku=sku, name=name, category=category, base_uom=base_uom)
+    def create_item(self, sku: str, name: str, category: str, base_uom: str) -> WarehouseItem:
+        item = WarehouseItem(sku=sku, name=name, category=category, base_uom=base_uom)
         self.db.add(item)
         self.db.commit()
         self.db.refresh(item)
@@ -44,11 +44,11 @@ class WarehouseOperationsService:
         """Calculate system stock at a specific location by summing journals"""
         loc_stock = self.db.query(
             func.sum(
-                func.if_(ItemJournal.journal_type == JournalType.DECREMENT, -ItemJournal.qty, ItemJournal.qty)
+                func.if_(WarehouseItemJournal.journal_type == JournalType.DECREMENT, -WarehouseItemJournal.qty, WarehouseItemJournal.qty)
             )
         ).filter(
-            ItemJournal.item_id == item_id,
-            ItemJournal.location_id == location_id
+            WarehouseItemJournal.item_id == item_id,
+            WarehouseItemJournal.location_id == location_id
         ).scalar()
         
         return loc_stock if loc_stock else 0.0
@@ -56,9 +56,9 @@ class WarehouseOperationsService:
     def get_total_stock(self, item_id: int, warehouse_id: int = None) -> float:
         query = self.db.query(
             func.sum(
-                func.if_(ItemJournal.journal_type == JournalType.DECREMENT, -ItemJournal.qty, ItemJournal.qty)
+                func.if_(WarehouseItemJournal.journal_type == JournalType.DECREMENT, -WarehouseItemJournal.qty, WarehouseItemJournal.qty)
             )
-        ).filter(ItemJournal.item_id == item_id)
+        ).filter(WarehouseItemJournal.item_id == item_id)
         
         if warehouse_id:
             query = query.join(InventoryLocation).filter(InventoryLocation.warehouse_id == warehouse_id)
@@ -69,19 +69,19 @@ class WarehouseOperationsService:
     # -----------------------
     # Stock Operations (Arrival, Shipment, Adjustments)
     # -----------------------
-    def add_stock(self, item_id: int, location_id: int, qty: float, reference: str = None) -> ItemJournal:
+    def add_stock(self, item_id: int, location_id: int, qty: float, reference: str = None) -> WarehouseItemJournal:
         if qty <= 0:
             raise ValueError("Qty must be greater than 0")
         
-        item = self.db.query(Item).filter(Item.id == item_id).with_for_update().first()
+        item = self.db.query(WarehouseItem).filter(WarehouseItem.id == item_id).with_for_update().first()
         if not item:
-            raise HTTPException(status_code=404, detail="Item not found")
+            raise HTTPException(status_code=404, detail="WarehouseItem not found")
             
         loc = self.db.query(InventoryLocation).filter(InventoryLocation.id == location_id).first()
         if not loc:
             raise HTTPException(status_code=404, detail="Location not found")
         
-        journal = ItemJournal(
+        journal = WarehouseItemJournal(
             item_id=item_id,
             location_id=location_id,
             journal_type=JournalType.INCREMENT,
@@ -96,19 +96,19 @@ class WarehouseOperationsService:
         self.db.refresh(journal)
         return journal
 
-    def remove_stock(self, item_id: int, location_id: int, qty: float, reference: str = None) -> ItemJournal:
+    def remove_stock(self, item_id: int, location_id: int, qty: float, reference: str = None) -> WarehouseItemJournal:
         if qty <= 0:
             raise ValueError("Qty must be greater than 0")
             
-        item = self.db.query(Item).filter(Item.id == item_id).with_for_update().first()
+        item = self.db.query(WarehouseItem).filter(WarehouseItem.id == item_id).with_for_update().first()
         if not item:
-            raise HTTPException(status_code=404, detail="Item not found")
+            raise HTTPException(status_code=404, detail="WarehouseItem not found")
 
         loc_stock = self.get_location_stock(item_id, location_id)
         if loc_stock < qty:
             raise ValueError(f"Insufficient stock at location. Available: {loc_stock}, Required: {qty}")
             
-        journal = ItemJournal(
+        journal = WarehouseItemJournal(
             item_id=item_id,
             location_id=location_id,
             journal_type=JournalType.DECREMENT,
@@ -129,16 +129,16 @@ class WarehouseOperationsService:
             raise ValueError("Transfer Qty must be greater than 0")
             
         # Secure locks
-        item = self.db.query(Item).filter(Item.id == item_id).with_for_update().first()
+        item = self.db.query(WarehouseItem).filter(WarehouseItem.id == item_id).with_for_update().first()
         if not item:
-            raise HTTPException(status_code=404, detail="Item not found")
+            raise HTTPException(status_code=404, detail="WarehouseItem not found")
 
         from_loc_stock = self.get_location_stock(item_id, from_location_id)
         if from_loc_stock < qty:
             raise ValueError(f"Insufficient stock at origin location. Available: {from_loc_stock}, Required: {qty}")
 
         # Decrement Journal
-        out_journal = ItemJournal(
+        out_journal = WarehouseItemJournal(
             item_id=item_id,
             location_id=from_location_id,
             journal_type=JournalType.DECREMENT,
@@ -148,7 +148,7 @@ class WarehouseOperationsService:
         self.db.add(out_journal)
 
         # Increment Journal
-        in_journal = ItemJournal(
+        in_journal = WarehouseItemJournal(
             item_id=item_id,
             location_id=to_location_id,
             journal_type=JournalType.INCREMENT,
@@ -160,16 +160,16 @@ class WarehouseOperationsService:
         self.db.commit()
         return out_journal, in_journal
 
-    def pick_items(self, item_id: int, location_id: int, qty: float, reference: str = None, allow_partial: bool = False) -> ItemJournal:
+    def pick_items(self, item_id: int, location_id: int, qty: float, reference: str = None, allow_partial: bool = False) -> WarehouseItemJournal:
         loc = self.db.query(InventoryLocation).filter(InventoryLocation.id == location_id).first()
         if not loc:
             raise HTTPException(status_code=404, detail="Location not found")
         if loc.location_type != LocationType.PICKING:
             raise ValueError("Location must be of type 'PICKING'")
             
-        item = self.db.query(Item).filter(Item.id == item_id).with_for_update().first()
+        item = self.db.query(WarehouseItem).filter(WarehouseItem.id == item_id).with_for_update().first()
         if not item:
-            raise HTTPException(status_code=404, detail="Item not found")
+            raise HTTPException(status_code=404, detail="WarehouseItem not found")
 
         loc_stock = self.get_location_stock(item_id, location_id)
         
@@ -182,7 +182,7 @@ class WarehouseOperationsService:
         if actual_qty <= 0:
             raise ValueError("No stock available to pick")
 
-        journal = ItemJournal(
+        journal = WarehouseItemJournal(
             item_id=item_id,
             location_id=location_id,
             journal_type=JournalType.DECREMENT,
@@ -201,9 +201,9 @@ class WarehouseOperationsService:
         if counted_qty < 0:
             raise ValueError("Counted qty cannot be negative")
             
-        item = self.db.query(Item).filter(Item.id == item_id).with_for_update().first()
+        item = self.db.query(WarehouseItem).filter(WarehouseItem.id == item_id).with_for_update().first()
         if not item:
-            raise HTTPException(status_code=404, detail="Item not found")
+            raise HTTPException(status_code=404, detail="WarehouseItem not found")
 
         system_qty = self.get_location_stock(item_id, location_id)
         adjustment_qty = counted_qty - system_qty
@@ -221,7 +221,7 @@ class WarehouseOperationsService:
         if adjustment_qty != 0:
             journal_type = JournalType.ADJUSTMENT
             # If adjustment is negative, we could use decrement, but keeping it adjustment and handling logic gracefully.
-            journal = ItemJournal(
+            journal = WarehouseItemJournal(
                 item_id=item_id,
                 location_id=location_id,
                 journal_type=journal_type,

@@ -3,8 +3,8 @@ from fastapi import HTTPException, status
 from typing import List, Optional
 
 from modules.inventory.models import (
-    Item, Location, LocationStock, ItemJournal, PhysicalInventory, 
-    JournalType, LocationType
+    InventoryItem, Location, LocationStock, StockMovement, 
+    MoveType, LocationType
 )
 from modules.users.models import Site
 
@@ -16,7 +16,7 @@ class WarehouseOperationsService:
     # 1 & 2. CORE STOCK MOVEMENTS (ADD / REMOVE)
     # ---------------------------------------------------------
 
-    def add_stock(self, item_id: int, location_id: int, quantity: float, reference: str) -> ItemJournal:
+    def add_stock(self, item_id: int, location_id: int, quantity: float, reference: str) -> InventoryItemJournal:
         """Add stock (Arrival/Increment) to a location."""
         if quantity <= 0:
             raise ValueError("Addition quantity must be greater than zero.")
@@ -25,11 +25,11 @@ class WarehouseOperationsService:
             item_id=item_id,
             location_id=location_id,
             quantity=quantity,
-            journal_type=JournalType.INCREMENT,
+            journal_type=MoveType.STOCK_MOVE,
             reference=reference
         )
 
-    def remove_stock(self, item_id: int, location_id: int, quantity: float, reference: str) -> ItemJournal:
+    def remove_stock(self, item_id: int, location_id: int, quantity: float, reference: str) -> InventoryItemJournal:
         """Remove stock (Shipment/Decrement) from a location."""
         if quantity <= 0:
             raise ValueError("Removal quantity must be greater than zero.")
@@ -38,7 +38,7 @@ class WarehouseOperationsService:
             item_id=item_id,
             location_id=location_id,
             quantity=-quantity, # Negative for removal
-            journal_type=JournalType.DECREMENT,
+            journal_type=MoveType.SCRAP,
             reference=reference
         )
 
@@ -46,14 +46,14 @@ class WarehouseOperationsService:
     # 3. PICKING ITEMS
     # ---------------------------------------------------------
 
-    def pick_items(self, item_id: int, location_id: int, quantity: float, reference: str, allow_partial: bool = False) -> (ItemJournal, float):
+    def pick_items(self, item_id: int, location_id: int, quantity: float, reference: str, allow_partial: bool = False) -> (InventoryItemJournal, float):
         """Pick items specifically from a PICKING location."""
         location = self.db.query(Location).filter(Location.id == location_id).first()
         if not location:
             raise HTTPException(status_code=404, detail="Location not found")
             
         if location.loc_type != LocationType.PICKING:
-            raise ValueError("Items can only be picked from a PICKING location.")
+            raise ValueError("InventoryItems can only be picked from a PICKING location.")
             
         stock_record = self._get_location_stock(item_id, location_id)
         current_stock = stock_record.stock_on_hand if stock_record else 0.0
@@ -73,7 +73,7 @@ class WarehouseOperationsService:
             item_id=item_id,
             location_id=location_id,
             quantity=-actual_pick_qty,
-            journal_type=JournalType.DECREMENT,
+            journal_type=MoveType.SCRAP,
             reference=reference
         )
         return journal, actual_pick_qty
@@ -113,7 +113,7 @@ class WarehouseOperationsService:
                 item_id=item_id,
                 location_id=location_id,
                 quantity=adjustment_qty,
-                journal_type=JournalType.ADJUSTMENT,
+                journal_type=MoveType.PHYSICAL_ADJUST,
                 reference=f"PI-ADJ: {reference}"
             )
             
@@ -174,12 +174,12 @@ class WarehouseOperationsService:
             LocationStock.location_id == location_id
         ).first()
 
-    def _process_movement(self, item_id: int, location_id: int, quantity: float, journal_type: JournalType, reference: str) -> ItemJournal:
+    def _process_movement(self, item_id: int, location_id: int, quantity: float, journal_type: JournalType, reference: str) -> InventoryItemJournal:
         """Core transactional method for all warehouse movements."""
         try:
-            item = self.db.query(Item).filter(Item.id == item_id).with_for_update().first()
+            item = self.db.query(InventoryItem).filter(InventoryItem.id == item_id).with_for_update().first()
             if not item:
-                raise HTTPException(status_code=404, detail="Item not found")
+                raise HTTPException(status_code=404, detail="InventoryItem not found")
 
             # Get or create LocationStock
             stock_record = self._get_location_stock(item_id, location_id)
@@ -194,7 +194,7 @@ class WarehouseOperationsService:
                 raise ValueError(f"Transaction denied. Insufficient stock. Attempted to drop on-hand stock below zero (Result: {new_stock_value})")
 
             # Create Journal
-            journal = ItemJournal(
+            journal = InventoryItemJournal(
                 item_id=item_id,
                 location_id=location_id,
                 journal_type=journal_type,

@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Enum, Text, JSON
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Enum, Text, JSON, Table
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from sqlalchemy_utils import StringEncryptedType
@@ -15,10 +15,28 @@ class UserRole(str, enum.Enum):
     WORKER = "worker"
     ACCOUNTANT = "accountant"
 
+class SiteType(str, enum.Enum):
+    SHOP = "shop"
+    HEAD_OFFICE = "head_office"
+    BRANCH = "branch"
+    OUTLET = "outlet"
+    WAREHOUSE = "warehouse"
+    ADMIN_OFFICE = "admin_office"
+    OTHER = "other"
+
+user_sites = Table(
+    "user_sites", 
+    Base.metadata,
+    Column("user_id", Integer, ForeignKey("users.id")),
+    Column("site_id", Integer, ForeignKey("sites.id"))
+)
+
 class Site(Base):
     __tablename__ = "sites"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), unique=True, index=True) # e.g. Factory 1, Head Office
+    site_type = Column(Enum(SiteType), default=SiteType.OTHER)
+    users = relationship("User", secondary=user_sites, back_populates="available_sites")
 
 class User(Base):
     __tablename__ = "users"
@@ -37,6 +55,8 @@ class User(Base):
     
     # Granular permissions mapping JSON: e.g. {"sales_orders": ["create", "edit", "view"]}
     permissions = Column(JSON, nullable=True)
+
+    available_sites = relationship("Site", secondary=user_sites, back_populates="users")
 
 class ActivityLog(Base):
     __tablename__ = "activity_logs"

@@ -6,7 +6,8 @@ from typing import List
 
 from core.database import get_db
 from modules.settings.models import ItemCategory, ItemSubCategory
-from modules.settings.schemas import CategoryCreate, CategoryResponse, SubCategoryCreate, SubCategoryResponse
+from modules.settings.schemas import CategoryCreate, CategoryResponse, SubCategoryCreate, SubCategoryResponse, SiteCreate, SiteResponse, AssignUsersRequest
+from modules.users.models import Site, SiteType, User
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -15,6 +16,53 @@ templates = Jinja2Templates(directory="templates")
 @router.get("", response_class=HTMLResponse, include_in_schema=False)
 def get_settings(request: Request):
     return templates.TemplateResponse("settings.html", {"request": request})
+
+# Sites API
+@router.get("/sites/types")
+def get_site_types():
+    return [{"value": e.value, "label": e.name.replace("_", " ").title()} for e in SiteType]
+
+@router.get("/sites", response_model=List[SiteResponse])
+def get_sites(db: Session = Depends(get_db)):
+    return db.query(Site).all()
+
+@router.post("/sites", response_model=SiteResponse)
+def create_site(site: SiteCreate, db: Session = Depends(get_db)):
+    existing = db.query(Site).filter(Site.name == site.name).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Site already exists")
+    new_site = Site(name=site.name, site_type=site.site_type)
+    db.add(new_site)
+    db.commit()
+    db.refresh(new_site)
+    return new_site
+
+@router.delete("/sites/{site_id}")
+def delete_site(site_id: int, db: Session = Depends(get_db)):
+    site = db.query(Site).filter(Site.id == site_id).first()
+    if not site:
+        raise HTTPException(status_code=404, detail="Site not found")
+    db.delete(site)
+    db.commit()
+    return {"status": "success"}
+
+@router.get("/sites/{site_id}/users")
+def get_site_users(site_id: int, db: Session = Depends(get_db)):
+    site = db.query(Site).filter(Site.id == site_id).first()
+    if not site:
+        raise HTTPException(status_code=404, detail="Site not found")
+    return [{"id": u.id, "username": u.username} for u in site.users]
+
+@router.post("/sites/{site_id}/assign_users")
+def assign_users_to_site(site_id: int, req: AssignUsersRequest, db: Session = Depends(get_db)):
+    site = db.query(Site).filter(Site.id == site_id).first()
+    if not site:
+        raise HTTPException(status_code=404, detail="Site not found")
+    
+    users = db.query(User).filter(User.id.in_(req.user_ids)).all()
+    site.users = users
+    db.commit()
+    return {"status": "success"}
 
 # Categories API
 @router.get("/categories", response_model=List[CategoryResponse])
@@ -58,6 +106,13 @@ def create_sub_category(sub: SubCategoryCreate, db: Session = Depends(get_db)):
     cat = db.query(ItemCategory).filter(ItemCategory.id == sub.category_id).first()
     if not cat:
         raise HTTPException(status_code=404, detail="Parent category not found")
+    # Check for duplicate sub-category name under the same parent
+    existing_sub = db.query(ItemSubCategory).filter(
+        ItemSubCategory.name == sub.name,
+        ItemSubCategory.category_id == sub.category_id
+    ).first()
+    if existing_sub:
+        raise HTTPException(status_code=400, detail=f"Sub-category '{sub.name}' already exists under '{cat.name}'")
     new_sub = ItemSubCategory(name=sub.name, category_id=sub.category_id)
     db.add(new_sub)
     db.commit()

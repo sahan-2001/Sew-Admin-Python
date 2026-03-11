@@ -42,7 +42,7 @@ class InventoryLocation(Base):
 
     # Relationships
     warehouse = relationship("Warehouse", back_populates="inventory_locations")
-    item_journals = relationship("ItemJournal", back_populates="location")
+    item_journals = relationship("WarehouseItemJournal", back_populates="location")
 
     def __repr__(self):
         return f"<InventoryLocation {self.name} ({self.location_type})>"
@@ -56,7 +56,7 @@ class ItemType(str, enum.Enum):
 # -----------------------
 # Item
 # -----------------------
-class Item(Base):
+class WarehouseItem(Base):
     """
     Independent item model specifically for the warehouse module.
     Could be linked to global items if needed.
@@ -75,7 +75,7 @@ class Item(Base):
     qty_on_hand = Column(Float, default=0.0)
 
     # Relationships
-    item_journals = relationship("ItemJournal", back_populates="item")
+    item_journals = relationship("WarehouseItemJournal", back_populates="item")
 
     def __repr__(self):
         return f"<Item {self.sku} - {self.name}>"
@@ -88,7 +88,7 @@ class JournalType(str, enum.Enum):
     DECREMENT = "decrement"
     ADJUSTMENT = "adjustment"
 
-class ItemJournal(Base):
+class WarehouseItemJournal(Base):
     __tablename__ = "item_journals"
 
     id = Column(Integer, primary_key=True)
@@ -100,11 +100,11 @@ class ItemJournal(Base):
     created_at = Column(DateTime, server_default=func.now())
 
     # Relationships
-    item = relationship("Item", back_populates="item_journals")
+    item = relationship("WarehouseItem", back_populates="item_journals")
     location = relationship("InventoryLocation", back_populates="item_journals")
 
     def __repr__(self):
-        return f"<ItemJournal {self.item.sku} {self.journal_type} {self.qty}>"
+        return f"<WarehouseItemJournal {self.item.sku} {self.journal_type} {self.qty}>"
 
 # -----------------------
 # Physical Inventory Adjustment
@@ -122,7 +122,7 @@ class PhysicalInventory(Base):
     reference = Column(String(100), nullable=True)  # e.g., inventory cycle count
 
     # Relationships
-    item = relationship("Item")
+    item = relationship("WarehouseItem")
     location = relationship("InventoryLocation")
 
     def __repr__(self):

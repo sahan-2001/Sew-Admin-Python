@@ -35,14 +35,12 @@
             <div class="dropdown">
                 <button class="nav-item dropbtn" style="background:transparent; border:none; cursor:pointer;"
                     id="siteSelectorBtn">
-                    <i class="fa-solid fa-location-dot"></i> <span id="currentSite">Head Office</span> <i
+                    <i class="fa-solid fa-location-dot"></i> <span id="currentSite">Loading...</span> <i
                         class="fa-solid fa-chevron-down" style="font-size:0.8rem"></i>
                 </button>
                 <div class="dropdown-content glass" id="siteDropdown">
-                    <a href="#" onclick="changeSite('Head Office')">Head Office</a>
-                    <a href="#" onclick="changeSite('Factory 1')">Factory 1</a>
-                    <a href="#" onclick="changeSite('Warehouse 1')">Warehouse 1</a>
-                    <a href="#" onclick="changeSite('Warehouse 2')">Warehouse 2</a>
+                    <!-- Sites injected via JS -->
+                    <a href="#">Loading...</a>
                 </div>
             </div>
 
@@ -119,8 +117,16 @@
     <script>
         // Site Selection Logic
         function changeSite(siteName) {
-            document.getElementById('currentSite').innerText = siteName;
-            localStorage.setItem('selectedSite', siteName);
+            let currentStr = document.getElementById('currentSite').innerText;
+            if (currentStr && currentStr !== 'Loading...' && currentStr !== siteName) {
+                if (confirm("Are you sure you want to change the current site? The page will reload.")) {
+                    localStorage.setItem('selectedSite', siteName);
+                    location.reload();
+                }
+            } else {
+                document.getElementById('currentSite').innerText = siteName;
+                localStorage.setItem('selectedSite', siteName);
+            }
         }
 
         // Theme Selection Logic
@@ -138,10 +144,51 @@
             }
         }
 
+        async function loadUserSites() {
+            const token = localStorage.getItem('token') || '';
+            const headers = token ? {'Authorization': `Bearer ${token}`} : {};
+            let sites = [];
+            try {
+                const res = await fetch('/api/users/me', {headers});
+                if (res.ok) {
+                    const data = await res.json();
+                    sites = data.available_sites || [];
+                }
+            } catch(e) {}
+            
+            // Fallback to all sites if no token or no permissions fetching /me
+            if (sites.length === 0) {
+                try {
+                    const allRes = await fetch('/api/settings/sites');
+                    if (allRes.ok) {
+                        sites = await allRes.json();
+                    }
+                } catch(e) {}
+            }
+
+            const dropdown = document.getElementById('siteDropdown');
+            dropdown.innerHTML = '';
+            if (sites && sites.length > 0) {
+                sites.forEach(s => {
+                    dropdown.innerHTML += `<a href="#" onclick="changeSite('${s.name}')">${s.name}</a>`;
+                });
+                let savedSite = localStorage.getItem('selectedSite');
+                if (!savedSite || !sites.find(site => site.name === savedSite)) {
+                    document.getElementById('currentSite').innerText = 'Loading...'; 
+                    changeSite(sites[0].name);
+                } else {
+                    document.getElementById('currentSite').innerText = 'Loading...';
+                    changeSite(savedSite);
+                }
+            } else {
+                dropdown.innerHTML = `<a href="#">No sites configured</a>`;
+                document.getElementById('currentSite').innerText = 'No Sites';
+            }
+        }
+
         // Initialize Settings
         document.addEventListener("DOMContentLoaded", () => {
-            let savedSite = localStorage.getItem('selectedSite') || 'Head Office';
-            changeSite(savedSite);
+            loadUserSites();
 
             let savedTheme = localStorage.getItem('theme') || 'system';
             applyTheme(savedTheme);

@@ -13,42 +13,32 @@
 <div class="tabs-container glass" style="padding: 20px; border-radius: 12px;">
     <div
         style="display: flex; gap: 15px; border-bottom: 1px solid var(--border-glass); padding-bottom: 10px; margin-bottom: 20px;">
-        <button class="tab-btn active" onclick="switchTab('sites')">Sites & Locations</button>
-        <button class="tab-btn" onclick="switchTab('currencies')">Currencies</button>
-        <button class="tab-btn" onclick="switchTab('terms')">Payment Terms & Methods</button>
-        <button class="tab-btn" onclick="switchTab('delivery')">Delivery Terms</button>
-        <button class="tab-btn" onclick="switchTab('vat')">VAT & Taxes</button>
-        <button class="tab-btn" onclick="switchTab('categories')">Categories</button>
+        <button class="tab-btn active" onclick="switchTab(event, 'sites')">Sites & Locations</button>
+        <button class="tab-btn" onclick="switchTab(event, 'currencies')">Currencies</button>
+        <button class="tab-btn" onclick="switchTab(event, 'terms')">Payment Terms & Methods</button>
+        <button class="tab-btn" onclick="switchTab(event, 'delivery')">Delivery Terms</button>
+        <button class="tab-btn" onclick="switchTab(event, 'vat')">VAT & Taxes</button>
+        <button class="tab-btn" onclick="switchTab(event, 'categories')">Categories</button>
     </div>
 
     <!-- Sites Tab -->
     <div id="sites" class="tab-content active">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <h3>Company Sites</h3>
-            <button class="btn btn-primary glass-btn btn-sm"><i class="fa-solid fa-plus"></i> Add Site</button>
+            <button class="btn btn-primary glass-btn btn-sm" onclick="openCreateSiteModal()"><i class="fa-solid fa-plus"></i> Add Site</button>
         </div>
         <table class="modern-table">
             <thead>
                 <tr>
                     <th>ID</th>
                     <th>Site Name</th>
+                    <th>Site Type</th>
                     <th>Actions</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="sites_tbody">
                 <tr>
-                    <td>1</td>
-                    <td>Head Office</td>
-                    <td class="action-cell"><button class="icon-btn edit-btn"><i
-                                class="fa-solid fa-pen"></i></button><button class="icon-btn danger-btn"><i
-                                class="fa-solid fa-trash"></i></button></td>
-                </tr>
-                <tr>
-                    <td>2</td>
-                    <td>Factory 1</td>
-                    <td class="action-cell"><button class="icon-btn edit-btn"><i
-                                class="fa-solid fa-pen"></i></button><button class="icon-btn danger-btn"><i
-                                class="fa-solid fa-trash"></i></button></td>
+                    <td colspan="4" style="text-align: center;">Loading...</td>
                 </tr>
             </tbody>
         </table>
@@ -146,6 +136,7 @@
                     <thead>
                         <tr>
                             <th>ID</th>
+                            <th>Parent Category</th>
                             <th>Sub-Category Name</th>
                             <th>Actions</th>
                         </tr>
@@ -196,8 +187,42 @@
 </div>
 
 
+<!-- Create Site Modal -->
+<div id="createSiteModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal('createSiteModal')">&times;</span>
+        <h2><i class="fa-solid fa-plus"></i> Create Site</h2>
+        <br>
+        <div class="form-group">
+            <label>Site Name</label>
+            <input type="text" id="site_name" />
+        </div>
+        <div class="form-group">
+            <label>Site Type</label>
+            <select id="site_type"></select>
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="submitCreateSite()">Create Site</button>
+    </div>
+</div>
+
+<!-- Assign Users Modal -->
+<div id="assignUsersModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal('assignUsersModal')">&times;</span>
+        <h2><i class="fa-solid fa-users"></i> Assign Users to Site</h2>
+        <br>
+        <input type="hidden" id="assign_site_id" />
+        <div class="form-group">
+            <label>Select Users</label>
+            <select id="assign_users_select" multiple style="height: 150px;"></select>
+            <small style="color:var(--text-muted);">Hold Ctrl/Cmd to select multiple users</small>
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="submitAssignUsers()">Assign Users</button>
+    </div>
+</div>
+
 <script>
-    function switchTab(tabId) {
+    function switchTab(event, tabId) {
         document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
         document.getElementById(tabId).style.display = 'block';
@@ -272,6 +297,8 @@
 
 <script>
     let categoriesList = [];
+    let allUsersList = [];
+    let siteTypesList = [];
 
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
@@ -307,12 +334,14 @@
             const tbody = document.getElementById('subcat_tbody');
             tbody.innerHTML = '';
             if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center">No sub-categories found.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center">No sub-categories found.</td></tr>';
             } else {
                 data.forEach(c => {
+                    const parentName = categoriesList.find(cat => cat.id === c.category_id)?.name || 'Unknown';
                     tbody.innerHTML += `
                         <tr>
                             <td>${c.id}</td>
+                            <td><span style="color:var(--primary);font-size:0.85rem">${parentName}</span></td>
                             <td>${c.name}</td>
                             <td class="action-cell">
                                 <button class="icon-btn danger-btn" onclick="deleteSubCategory(${c.id})"><i class="fa-solid fa-trash"></i></button>
@@ -346,27 +375,45 @@
         } catch (e) { alert("Network Error"); }
     }
 
-    function openCreateSubCategoryModal() {
+    async function openCreateSubCategoryModal() {
+        // Always re-fetch latest categories to ensure list is up to date
+        try {
+            const res = await fetch('/api/settings/categories');
+            categoriesList = await res.json();
+        } catch (e) { console.error('Failed to refresh categories', e); }
+
         const select = document.getElementById('sc_parent_cat');
-        select.innerHTML = '<option value="">-- Select Parent --</option>';
-        categoriesList.forEach(c => {
-            select.innerHTML += `<option value="${c.id}">${c.name}</option>`;
-        });
+        select.innerHTML = '<option value="">-- Select Parent Category --</option>';
+        if (categoriesList.length === 0) {
+            select.innerHTML += '<option disabled>No categories found — create a category first</option>';
+        } else {
+            categoriesList.forEach(c => {
+                select.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+            });
+        }
+        document.getElementById('sc_name').value = '';
         openModal('createSubCategoryModal');
     }
 
     async function submitCreateSubCategory() {
         const parent_id = document.getElementById('sc_parent_cat').value;
-        const name = document.getElementById('sc_name').value;
-        if (!parent_id || !name) return alert("Please select parent and enter sub-category name");
+        const name = document.getElementById('sc_name').value.trim();
+        if (!parent_id) return alert("Please select a parent category.");
+        if (!name) return alert("Please enter a sub-category name.");
         try {
             const res = await fetch('/api/settings/sub-categories', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: name, category_id: parseInt(parent_id) })
             });
-            if (!res.ok) alert("Error: " + (await res.json()).detail);
-            else { closeModal('createSubCategoryModal'); document.getElementById('sc_name').value = ''; loadSubCategories(); }
-        } catch (e) { alert("Network Error"); }
+            if (!res.ok) {
+                const err = await res.json();
+                alert("Error: " + err.detail);
+            } else {
+                closeModal('createSubCategoryModal');
+                document.getElementById('sc_name').value = '';
+                await loadSubCategories();
+            }
+        } catch (e) { alert("Network Error: " + e.message); }
     }
 
     async function deleteSubCategory(id) {
@@ -378,9 +425,117 @@
         } catch (e) { alert("Network Error"); }
     }
 
+    async function loadSites() {
+        try {
+            const res = await fetch('/api/settings/sites');
+            const data = await res.json();
+            const tbody = document.getElementById('sites_tbody');
+            tbody.innerHTML = '';
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center">No sites found.</td></tr>';
+            } else {
+                data.forEach(s => {
+                    const typeLabel = s.site_type.replace("_", " ").toUpperCase();
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${s.id}</td>
+                            <td>${s.name}</td>
+                            <td>${typeLabel}</td>
+                            <td class="action-cell">
+                                <button class="btn btn-sm glass-btn" onclick="openAssignUsersModal(${s.id})"><i class="fa-solid fa-users"></i> Users</button>
+                                <button class="icon-btn danger-btn" onclick="deleteSite(${s.id})"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+        } catch (e) { console.error("Error loading sites:", e); }
+    }
+
+    async function loadSiteTypes() {
+        try {
+            const res = await fetch('/api/settings/sites/types');
+            siteTypesList = await res.json();
+        } catch (e) { console.error("Error loading site types:", e); }
+    }
+
+    async function openCreateSiteModal() {
+        document.getElementById('site_name').value = '';
+        const select = document.getElementById('site_type');
+        select.innerHTML = '';
+        siteTypesList.forEach(t => { select.innerHTML += `<option value="${t.value}">${t.label}</option>`; });
+        openModal('createSiteModal');
+    }
+
+    async function submitCreateSite() {
+        const name = document.getElementById('site_name').value;
+        const type = document.getElementById('site_type').value;
+        if (!name) return alert("Please enter a site name");
+        try {
+            const res = await fetch('/api/settings/sites', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name, site_type: type })
+            });
+            if (!res.ok) alert("Error: " + (await res.json()).detail);
+            else { closeModal('createSiteModal'); loadSites(); }
+        } catch (e) { alert("Network Error"); }
+    }
+
+    async function deleteSite(id) {
+        if (!confirm("Are you sure?")) return;
+        try {
+            const res = await fetch('/api/settings/sites/' + id, { method: 'DELETE' });
+            if (!res.ok) alert("Error: " + (await res.json()).detail);
+            else loadSites();
+        } catch (e) { alert("Network Error"); }
+    }
+
+    async function loadAllUsers() {
+        try {
+            const res = await fetch('/api/users/');
+            if(res.ok) allUsersList = await res.json();
+        } catch (e) { console.error("Error loading users:", e); }
+    }
+
+    async function openAssignUsersModal(siteId) {
+        document.getElementById('assign_site_id').value = siteId;
+        const select = document.getElementById('assign_users_select');
+        select.innerHTML = '';
+        allUsersList.forEach(u => { select.innerHTML += `<option value="${u.id}">${u.username}</option>`; });
+        
+        try {
+            const res = await fetch('/api/settings/sites/' + siteId + '/users');
+            if (res.ok) {
+                const checkedUsers = await res.json();
+                const checkedIds = checkedUsers.map(u => u.id);
+                Array.from(select.options).forEach(opt => {
+                    if (checkedIds.includes(parseInt(opt.value))) opt.selected = true;
+                });
+            }
+        } catch(e) {}
+        openModal('assignUsersModal');
+    }
+
+    async function submitAssignUsers() {
+        const siteId = document.getElementById('assign_site_id').value;
+        const select = document.getElementById('assign_users_select');
+        const user_ids = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
+        try {
+            const res = await fetch('/api/settings/sites/' + siteId + '/assign_users', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_ids: user_ids })
+            });
+            if (!res.ok) alert("Error: " + (await res.json()).detail);
+            else closeModal('assignUsersModal');
+        } catch (e) { alert("Network Error"); }
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
         loadCategories();
         loadSubCategories();
+        loadSites();
+        loadSiteTypes();
+        loadAllUsers();
     });
 </script>
 {% endblock %}

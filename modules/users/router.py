@@ -43,7 +43,18 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
 @router.get("/me")
 def read_users_me(current_user: User = Depends(get_current_active_user)):
-    return {"id": current_user.id, "username": current_user.username, "role": current_user.role, "permissions": current_user.permissions}
+    return {
+        "id": current_user.id, 
+        "username": current_user.username, 
+        "role": current_user.role, 
+        "permissions": current_user.permissions,
+        "available_sites": [{"id": s.id, "name": s.name} for s in current_user.available_sites]
+    }
+
+@router.get("/")
+def get_all_users(db: Session = Depends(get_db)):
+    users = db.query(User).all()
+    return [{"id": u.id, "username": u.username} for u in users]
 
 @router.get("/activity-logs")
 def get_recent_activity_logs(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):

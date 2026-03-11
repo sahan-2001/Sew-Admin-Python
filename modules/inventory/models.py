@@ -12,7 +12,7 @@ class MoveType(str, enum.Enum):
     SCRAP = "Scrap Sale"
     DESTROY = "Destroy/Write-off"
 
-class Item(Base):
+class InventoryItem(Base):
     __tablename__ = "items"
     id = Column(Integer, primary_key=True, index=True)
     sku = Column(String(50), unique=True, index=True)
