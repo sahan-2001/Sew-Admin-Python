@@ -17,12 +17,12 @@ class UserRole(str, enum.Enum):
     ACCOUNTANT = "accountant"
 
 class SiteType(str, enum.Enum):
-    SHOP = "shop"
     HEAD_OFFICE = "head_office"
+    FACTORY = "factory"
     BRANCH = "branch"
     OUTLET = "outlet"
     WAREHOUSE = "warehouse"
-    ADMIN_OFFICE = "admin_office"
+    ADMIN_OFFICE = "admin_office"   
     OTHER = "other"
 
 # Association Tables

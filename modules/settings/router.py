@@ -14,9 +14,10 @@ from modules.settings.schemas import (
     UserCreate, UserUpdate,
     CompanyInfoResponse, CompanyInfoUpdate,
     ApprovalSetupResponse, ApprovalSetupUpdate,
-    EmailTemplateResponse, EmailTemplateUpdate
+    EmailTemplateResponse, EmailTemplateUpdate,
+    CurrencyCreate, CurrencyUpdate, CurrencyResponse
 )
-from modules.settings.models import CompanyInfo, ApprovalSetup, EmailTemplate
+from modules.settings.models import CompanyInfo, ApprovalSetup, EmailTemplate, Currency
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -367,3 +368,56 @@ def update_email_template(template_id: int, data: EmailTemplateUpdate, db: Sessi
     db.commit()
     db.refresh(template)
     return template
+
+# Currency API
+@router.get("/currencies/default", response_model=Optional[CurrencyResponse])
+def get_default_currency(db: Session = Depends(get_db)):
+    return db.query(Currency).filter(Currency.is_global_default == True).first()
+
+@router.get("/currencies", response_model=List[CurrencyResponse])
+def get_currencies(db: Session = Depends(get_db)):
+    return db.query(Currency).all()
+
+@router.post("/currencies", response_model=CurrencyResponse)
+def create_currency(data: CurrencyCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    if data.is_global_default:
+        db.query(Currency).update({Currency.is_global_default: False})
+    
+    new_curr = Currency(**data.model_dump())
+    db.add(new_curr)
+    db.commit()
+    db.refresh(new_curr)
+    return new_curr
+
+@router.put("/currencies/{curr_id}", response_model=CurrencyResponse)
+def update_currency(curr_id: int, data: CurrencyUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    curr = db.query(Currency).filter(Currency.id == curr_id).first()
+    if not curr:
+        raise HTTPException(status_code=404, detail="Currency not found")
+        
+    if data.is_global_default:
+        db.query(Currency).filter(Currency.id != curr_id).update({Currency.is_global_default: False})
+        
+    for key, value in data.model_dump(exclude_unset=True).items():
+        setattr(curr, key, value)
+        
+    db.commit()
+    db.refresh(curr)
+    return curr
+
+@router.delete("/currencies/{curr_id}")
+def delete_currency(curr_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    curr = db.query(Currency).filter(Currency.id == curr_id).first()
+    if not curr:
+        raise HTTPException(status_code=404, detail="Currency not found")
+    db.delete(curr)
+    db.commit()
+    return {"status": "success"}

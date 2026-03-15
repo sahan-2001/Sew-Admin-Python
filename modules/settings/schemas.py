@@ -107,3 +107,24 @@ class EmailTemplateResponse(EmailTemplateBase):
     id: int
     class Config:
         from_attributes = True
+
+# Currencies
+class CurrencyBase(BaseModel):
+    code: str
+    name: str
+    symbol: str
+    is_global_default: bool = False
+
+class CurrencyCreate(CurrencyBase):
+    pass
+
+class CurrencyUpdate(BaseModel):
+    code: Optional[str] = None
+    name: Optional[str] = None
+    symbol: Optional[str] = None
+    is_global_default: Optional[bool] = None
+
+class CurrencyResponse(CurrencyBase):
+    id: int
+    class Config:
+        from_attributes = True

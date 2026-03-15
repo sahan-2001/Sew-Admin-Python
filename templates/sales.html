@@ -273,7 +273,7 @@
             </div>
             
             <div style="text-align: right; margin-top: 1.5rem;">
-                <strong style="font-size: 1.2rem; color: var(--text-color);">Grand Total: $ <span id="so_grand_total">0.00</span></strong>
+                <strong style="font-size: 1.2rem; color: var(--text-color);">Grand Total: <span id="so_curr_sym">$</span> <span id="so_grand_total">0.00</span></strong>
             </div>
         </div>
         
@@ -1072,6 +1072,7 @@
     let salesOrders = [];
     let globalItems = [];
     let globalLocations = [];
+    let systemCurrency = { symbol: '$', code: 'USD' };
     
     async function loadGlobalWarehouseData() {
         try {
@@ -1080,7 +1081,16 @@
             
             const resL = await apiFetch('/api/warehouse/locations');
             if(resL.ok) globalLocations = await resL.json();
-        } catch(e) { console.error('Error loading warehouse items/locations', e); }
+
+            const resC = await apiFetch('/api/settings/currencies/default');
+            if(resC.ok) {
+                const def = await resC.json();
+                if(def) {
+                    systemCurrency = def;
+                    if(document.getElementById('so_curr_sym')) document.getElementById('so_curr_sym').innerText = systemCurrency.symbol;
+                }
+            }
+        } catch(e) { console.error('Error loading warehouse items/locations/currency', e); }
     }
 
     async function loadSalesOrders() {
@@ -1393,7 +1403,7 @@
         } catch(e) {}
         
         const prt = window.open('', '', 'height=800,width=800');
-        let linesHtml = so.lines.map(l => `<tr><td>${l.item_name}</td><td>${l.quantity}</td><td>${l.uom}</td><td>$${l.unit_price.toFixed(2)}</td><td>$${l.line_total.toFixed(2)}</td></tr>`).join('');
+        let linesHtml = so.lines.map(l => `<tr><td>${l.item_name}</td><td>${l.quantity}</td><td>${l.uom}</td><td>${systemCurrency.symbol}${l.unit_price.toFixed(2)}</td><td>${systemCurrency.symbol}${l.line_total.toFixed(2)}</td></tr>`).join('');
         
         const logoHtml = cinfo.logo_url && cinfo.logo_url.trim() !== '' ? `<img src="${cinfo.logo_url}" style="max-width:150px">` : `<h2>${cinfo.name}</h2>`;
         
@@ -1422,7 +1432,7 @@
             <table>
                 <tr><th>Item</th><th>Qty</th><th>UOM</th><th>Price</th><th>Total</th></tr>
                 ${linesHtml}
-                <tr><td colspan="4" style="text-align:right"><b>Grand Total:</b></td><td><b>$${so.total_amount.toFixed(2)}</b></td></tr>
+                <tr><td colspan="4" style="text-align:right"><b>Grand Total:</b></td><td><b>${systemCurrency.symbol}${so.total_amount.toFixed(2)}</b></td></tr>
             </table>
             </body></html>
         `);

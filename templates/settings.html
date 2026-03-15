@@ -67,7 +67,7 @@
     <div id="currencies" class="tab-content" style="display: none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <h3>Currencies (Global System Currencies)</h3>
-            <button class="btn btn-primary glass-btn btn-sm"><i class="fa-solid fa-plus"></i> Add Currency</button>
+            <button class="btn btn-primary glass-btn btn-sm" onclick="openCurrencyModal()"><i class="fa-solid fa-plus"></i> Add Currency</button>
         </div>
         <table class="modern-table">
             <thead>
@@ -79,24 +79,9 @@
                     <th>Actions</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="currencies_tbody">
                 <tr>
-                    <td>USD</td>
-                    <td>US Dollar</td>
-                    <td>$</td>
-                    <td><i class="fa-solid fa-check text-green"></i></td>
-                    <td class="action-cell"><button class="icon-btn edit-btn"><i
-                                class="fa-solid fa-pen"></i></button><button class="icon-btn danger-btn"><i
-                                class="fa-solid fa-trash"></i></button></td>
-                </tr>
-                <tr>
-                    <td>LKR</td>
-                    <td>Sri Lankan Rupee</td>
-                    <td>Rs</td>
-                    <td><i class="fa-solid fa-xmark text-red"></i></td>
-                    <td class="action-cell"><button class="icon-btn edit-btn"><i
-                                class="fa-solid fa-pen"></i></button><button class="icon-btn danger-btn"><i
-                                class="fa-solid fa-trash"></i></button></td>
+                    <td colspan="5" style="text-align: center;">Loading...</td>
                 </tr>
             </tbody>
         </table>
@@ -123,7 +108,8 @@
         <div class="data-panel glass" style="max-width: 800px;">
             <div class="panel-header" style="margin-bottom: 1.5rem;">
                 <h3 style="margin:0;">Company Information</h3>
-                <p class="subtitle text-sm" style="margin-top: 5px;">Update company details used on documents (PDFs, Emails).</p>
+                <p class="subtitle text-sm" style="margin-top: 5px;">Update company details used on documents (PDFs,
+                    Emails).</p>
             </div>
             <div class="form-grid">
                 <div class="form-group col-span-2">
@@ -168,7 +154,8 @@
         <div class="data-panel glass" style="max-width: 800px;">
             <div class="panel-header" style="margin-bottom: 1.5rem;">
                 <h3 style="margin:0;">Approval Workflows</h3>
-                <p class="subtitle text-sm" style="margin-top: 5px;">Configure which documents require multi-stage approval before release.</p>
+                <p class="subtitle text-sm" style="margin-top: 5px;">Configure which documents require multi-stage
+                    approval before release.</p>
             </div>
             <div class="table-responsive">
                 <table class="modern-table">
@@ -180,7 +167,9 @@
                         </tr>
                     </thead>
                     <tbody id="approvals_tbody">
-                        <tr><td colspan="3" style="text-align: center;">Loading...</td></tr>
+                        <tr>
+                            <td colspan="3" style="text-align: center;">Loading...</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -192,14 +181,21 @@
         <div class="data-panel glass" style="max-width: 1000px;">
             <div class="panel-header" style="margin-bottom: 1.5rem;">
                 <h3 style="margin:0;">Email Templates</h3>
-                <p class="subtitle text-sm" style="margin-top: 5px;">Manage templates used to send automated/manual document emails.</p>
+                <p class="subtitle text-sm" style="margin-top: 5px;">Manage templates used to send automated/manual
+                    document emails.</p>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
                 <div class="table-responsive">
                     <table class="modern-table">
-                        <thead><tr><th>Template Name</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>Template Name</th>
+                            </tr>
+                        </thead>
                         <tbody id="emails_tbody">
-                            <tr><td>Loading...</td></tr>
+                            <tr>
+                                <td>Loading...</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -415,6 +411,36 @@
     </div>
 </div>
 
+<!-- Currency Modal -->
+<div id="currencyModal" class="modal">
+    <div class="modal-content glass">
+        <span class="close-modal" onclick="closeModal('currencyModal')">&times;</span>
+        <h3 id="currencyModalTitle">Add Currency</h3>
+        <input type="hidden" id="curr_id">
+        <div class="form-group">
+            <label>Currency Code (e.g. USD)</label>
+            <input type="text" id="curr_code" placeholder="USD">
+        </div>
+        <div class="form-group">
+            <label>Currency Name</label>
+            <input type="text" id="curr_name" placeholder="US Dollar">
+        </div>
+        <div class="form-group">
+            <label>Symbol</label>
+            <input type="text" id="curr_symbol" placeholder="$">
+        </div>
+        <div class="form-group" style="flex-direction: row; align-items: center; gap: 10px; margin-top: 10px;">
+            <input type="checkbox" id="curr_is_global" style="width: auto; height: auto;">
+            <label for="curr_is_global" style="margin-bottom: 0;">Set as Global Default</label>
+        </div>
+        <div style="margin-top:1.5rem;">
+            <button class="btn btn-primary glass-btn" style="width:100%" onclick="saveCurrency()">
+                <i class="fa-solid fa-check"></i> Save Currency
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
     function switchTab(event, tabId) {
         document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
@@ -472,6 +498,7 @@
     let categoriesList = [];
     let allUsersList = [];
     let siteTypesList = [];
+    let currenciesList = [];
 
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
@@ -749,12 +776,12 @@
 
 
     const SITE_TYPE_ICONS = {
-        shop: 'fa-store', head_office: 'fa-building', branch: 'fa-code-branch',
-        outlet: 'fa-tag', warehouse: 'fa-warehouse', admin_office: 'fa-briefcase', other: 'fa-location-dot'
+        head_office: 'fa-building', branch: 'fa-code-branch', factory: 'fa-industry',
+        outlet: 'fa-tag', warehouse: 'fa-warehouse', other: 'fa-location-dot'
     };
     const SITE_TYPE_LABELS = {
-        shop: 'Shop', head_office: 'Head Office', branch: 'Branch',
-        outlet: 'Outlet', warehouse: 'Warehouse', admin_office: 'Admin Office', other: 'Other'
+        head_office: 'Head Office', branch: 'Branch', factory: 'Factory',
+        outlet: 'Outlet', warehouse: 'Warehouse', other: 'Other'
     };
 
     async function loadSites() {
@@ -911,7 +938,7 @@
         };
         try {
             const res = await apiFetch('/api/settings/company-info', {
-                method: 'PUT', headers: {'Content-Type': 'application/json'},
+                method: 'PUT', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)
             });
             if (res.ok) alert("Company Info Saved Successfully.");
@@ -945,14 +972,14 @@
                     `;
                 });
             }
-        } catch (e) {}
+        } catch (e) { }
     }
 
     async function saveApproval(id) {
         const chk = document.getElementById('app_chk_' + id).checked;
         try {
             const res = await apiFetch('/api/settings/approval-setup/' + id, {
-                method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ requires_approval: chk })
+                method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requires_approval: chk })
             });
             if (res.ok) alert("Saved workflow setting.");
         } catch (e) { alert("Network error"); }
@@ -975,12 +1002,12 @@
                     `;
                 });
             }
-        } catch (e) {}
+        } catch (e) { }
     }
 
     function editEmail(id) {
         const em = emailsData.find(x => x.id === id);
-        if(!em) return;
+        if (!em) return;
         document.getElementById('email_editor_panel').style.display = 'block';
         document.getElementById('em_id').value = em.id;
         document.getElementById('em_name').value = em.name;
@@ -997,13 +1024,97 @@
         };
         try {
             const res = await apiFetch('/api/settings/email-templates/' + id, {
-                method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
+                method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
             });
             if (res.ok) {
                 alert("Email template updated.");
                 loadEmails();
             } else alert("Error");
-        } catch (e) {}
+        } catch (e) { }
+    }
+
+    // Currencies management
+    async function loadCurrencies() {
+        try {
+            const res = await apiFetch('/api/settings/currencies');
+            currenciesList = await res.json();
+            const tbody = document.getElementById('currencies_tbody');
+            tbody.innerHTML = '';
+            if (currenciesList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center">No currencies found.</td></tr>';
+            } else {
+                currenciesList.forEach(c => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${c.code}</td>
+                            <td>${c.name}</td>
+                            <td>${c.symbol}</td>
+                            <td>${c.is_global_default ? '<i class="fa-solid fa-check text-green"></i>' : '<i class="fa-solid fa-xmark text-red"></i>'}</td>
+                            <td class="action-cell">
+                                <button class="icon-btn edit-btn" onclick="openCurrencyModal(${c.id})"><i class="fa-solid fa-pen"></i></button>
+                                <button class="icon-btn danger-btn" onclick="deleteCurrency(${c.id})"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+        } catch (e) { console.error("Error loading currencies:", e); }
+    }
+
+    function openCurrencyModal(id = null) {
+        if (id) {
+            const c = currenciesList.find(x => x.id === id);
+            document.getElementById('currencyModalTitle').innerText = 'Edit Currency';
+            document.getElementById('curr_id').value = c.id;
+            document.getElementById('curr_code').value = c.code;
+            document.getElementById('curr_name').value = c.name;
+            document.getElementById('curr_symbol').value = c.symbol;
+            document.getElementById('curr_is_global').checked = c.is_global_default;
+        } else {
+            document.getElementById('currencyModalTitle').innerText = 'Add Currency';
+            document.getElementById('curr_id').value = '';
+            document.getElementById('curr_code').value = '';
+            document.getElementById('curr_name').value = '';
+            document.getElementById('curr_symbol').value = '';
+            document.getElementById('curr_is_global').checked = false;
+        }
+        openModal('currencyModal');
+    }
+
+    async function saveCurrency() {
+        const id = document.getElementById('curr_id').value;
+        const body = {
+            code: document.getElementById('curr_code').value,
+            name: document.getElementById('curr_name').value,
+            symbol: document.getElementById('curr_symbol').value,
+            is_global_default: document.getElementById('curr_is_global').checked
+        };
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `/api/settings/currencies/${id}` : '/api/settings/currencies';
+
+        try {
+            const res = await apiFetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            if (res.ok) {
+                closeModal('currencyModal');
+                loadCurrencies();
+            } else {
+                const err = await res.json();
+                alert("Error: " + (err.detail || "Failed to save"));
+            }
+        } catch (e) { alert("Network error"); }
+    }
+
+    async function deleteCurrency(id) {
+        if (!confirm("Are you sure?")) return;
+        try {
+            const res = await apiFetch(`/api/settings/currencies/${id}`, { method: 'DELETE' });
+            if (res.ok) loadCurrencies();
+            else alert("Error deleting currency");
+        } catch (e) { alert("Network error"); }
     }
 
     document.addEventListener("DOMContentLoaded", async () => {
@@ -1015,6 +1126,7 @@
         loadCompanyInfo();
         loadApprovals();
         loadEmails();
+        loadCurrencies();
     });
 </script>
 {% endblock %}
