@@ -46,6 +46,23 @@ def delete_site(site_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"status": "success"}
 
+@router.put("/sites/{site_id}", response_model=SiteResponse)
+def update_site(site_id: int, site: SiteCreate, db: Session = Depends(get_db)):
+    existing = db.query(Site).filter(Site.id == site_id).first()
+    if not existing:
+        raise HTTPException(status_code=404, detail="Site not found")
+    
+    # Check name collision
+    conflict = db.query(Site).filter(Site.name == site.name, Site.id != site_id).first()
+    if conflict:
+        raise HTTPException(status_code=400, detail="Site name already exists")
+        
+    existing.name = site.name
+    existing.site_type = site.site_type
+    db.commit()
+    db.refresh(existing)
+    return existing
+
 @router.get("/sites/{site_id}/users")
 def get_site_users(site_id: int, db: Session = Depends(get_db)):
     site = db.query(Site).filter(Site.id == site_id).first()

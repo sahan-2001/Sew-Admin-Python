@@ -62,19 +62,20 @@
                     style="cursor:pointer; padding-left:1.5rem; border-left:1px solid var(--border-glass);">
                     <img src="https://ui-avatars.com/api/?name=Admin+User&background=2563eb&color=fff" alt="User"
                         class="avatar">
-                    <span>Admin</span>
+                    <span id="usernameDisplay">Admin</span>
                 </div>
                 <!-- Top right corner hover account settings dropdown -->
                 <div class="dropdown-content glass text-sm"
                     style="right:0; left:auto; min-width: 200px; padding: 10px;">
                     <div style="padding: 10px; border-bottom: 1px solid var(--border-glass); margin-bottom: 5px;">
-                        <strong style="color:var(--text-main);">admin / CEO</strong>
-                        <div style="color:var(--text-muted); font-size: 0.8rem; margin-top:2px;">root-admin@sewadmin.com
+                        <strong id="userRoleDisplay">admin / CEO</strong>
+                        <div id="userEmailDisplay" style="color:var(--text-muted); font-size: 0.8rem; margin-top:2px;">
+                            root-admin@sewadmin.com
                         </div>
                     </div>
                     <a href="/api/users/settings"><i class="fa-solid fa-user-gear"></i> Account Settings</a>
                     <a href="/api/users/logs"><i class="fa-solid fa-clock-rotate-left"></i> Activity Logs</a>
-                    <a href="/api/users/logout" style="color:var(--danger);"><i
+                    <a href="#" onclick="logout()" style="color:var(--danger);"><i
                             class="fa-solid fa-arrow-right-from-bracket"></i> Sign Out</a>
                 </div>
             </div>
@@ -115,13 +116,51 @@
     </div>
 
     <script>
+        // Check if user is logged in
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            const currentPath = window.location.pathname;
+
+            // List of paths that don't require authentication
+            const publicPaths = ['/api/users/login', '/register', '/forgot-password'];
+
+            if (!token && !publicPaths.includes(currentPath) && currentPath !== '/') {
+                window.location.href = '/api/users/login';
+                return false;
+            }
+            return true;
+        }
+
+        // Logout function
+        async function logout() {
+            try {
+                const token = localStorage.getItem('token');
+                if (token) {
+                    await fetch('/api/users/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+            } finally {
+                localStorage.removeItem('token');
+                localStorage.removeItem('selectedSite');
+                localStorage.removeItem('userData');
+                window.location.href = '/api/users/login';
+            }
+        }
+
         // Site Selection Logic
         function changeSite(siteName) {
             let currentStr = document.getElementById('currentSite').innerText;
-            if (currentStr && currentStr !== 'Loading...' && currentStr !== siteName) {
+            if (currentStr && currentStr !== 'Loading...' && currentStr !== siteName && currentStr !== 'No Sites') {
                 if (confirm("Are you sure you want to change the current site? The page will reload.")) {
                     localStorage.setItem('selectedSite', siteName);
-                    location.reload();
+                    window.location.reload();
                 }
             } else {
                 document.getElementById('currentSite').innerText = siteName;
@@ -146,49 +185,118 @@
 
         async function loadUserSites() {
             const token = localStorage.getItem('token') || '';
-            const headers = token ? {'Authorization': `Bearer ${token}`} : {};
-            let sites = [];
-            try {
-                const res = await fetch('/api/users/me', {headers});
-                if (res.ok) {
-                    const data = await res.json();
-                    sites = data.available_sites || [];
-                }
-            } catch(e) {}
-            
-            // Fallback to all sites if no token or no permissions fetching /me
-            if (sites.length === 0) {
-                try {
-                    const allRes = await fetch('/api/settings/sites');
-                    if (allRes.ok) {
-                        sites = await allRes.json();
-                    }
-                } catch(e) {}
+
+            // Check if we're on a page that doesn't need site data
+            const currentPath = window.location.pathname;
+            const publicPaths = ['/api/users/login', '/register', '/forgot-password'];
+            if (publicPaths.includes(currentPath)) {
+                return;
             }
 
+            if (!token) {
+                window.location.href = '/api/users/login';
+                return;
+            }
+
+            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+            let sites = [];
+            let userRole = null;
+            let userData = null;
+
+            try {
+                const res = await fetch('/api/users/me', { headers });
+                if (res.ok) {
+                    userData = await res.json();
+                    sites = userData.available_sites || [];
+                    userRole = userData.role;
+
+                    // Update user profile info in navbar
+                    const nameEl = document.getElementById('usernameDisplay');
+                    if (nameEl) nameEl.innerText = userData.username;
+
+                    const roleEl = document.querySelector('#userRoleDisplay');
+                    if (roleEl) {
+                        roleEl.innerText = userData.username + ' / ' + userData.role;
+                    }
+
+                    const emailEl = document.getElementById('userEmailDisplay');
+                    if (emailEl) {
+                        emailEl.innerText = userData.email || 'No email';
+                    }
+
+                    // Apply user's theme preference
+                    if (userData.theme_preference) {
+                        setTheme(userData.theme_preference);
+                    }
+                } else if (res.status === 401) {
+                    // Token expired or invalid
+                    logout();
+                    return;
+                }
+            } catch (e) {
+                console.error('Error loading user data:', e);
+            }
+
+            // Check access for settings page - FIXED LOGIC HERE
+            const isSettingsPage = window.location.pathname.startsWith('/api/settings');
+            const isAdmin = userRole && (userRole.toLowerCase() === 'admin');
+
+            if (isSettingsPage && !isAdmin) {
+                // For non-admin users, check if they have sites
+                if (sites.length === 0) {
+                    console.log("Access denied: Non-admin user with no sites trying to access settings");
+                    alert('Access denied. You need to be assigned to at least one site to access settings.');
+                    window.location.href = '/';
+                    return;
+                }
+            }
+
+            // If user is admin but has no sites, still allow access with a message
+            if (isSettingsPage && isAdmin && sites.length === 0) {
+                console.log("Admin access granted without sites");
+                // Show a notification but don't block
+                const siteDropdown = document.getElementById('siteDropdown');
+                siteDropdown.innerHTML = '<a href="#">No sites configured (Admin mode)</a>';
+                document.getElementById('currentSite').innerText = 'Admin (No Site)';
+                return;
+            }
+
+            // Populate site dropdown
             const dropdown = document.getElementById('siteDropdown');
             dropdown.innerHTML = '';
+
             if (sites && sites.length > 0) {
                 sites.forEach(s => {
                     dropdown.innerHTML += `<a href="#" onclick="changeSite('${s.name}')">${s.name}</a>`;
                 });
+
                 let savedSite = localStorage.getItem('selectedSite');
-                if (!savedSite || !sites.find(site => site.name === savedSite)) {
-                    document.getElementById('currentSite').innerText = 'Loading...'; 
-                    changeSite(sites[0].name);
+                const siteExists = savedSite && sites.find(site => site.name === savedSite);
+
+                if (!siteExists) {
+                    // If no saved site or saved site not in list, use first available
+                    if (sites.length > 0) {
+                        changeSite(sites[0].name);
+                    }
                 } else {
-                    document.getElementById('currentSite').innerText = 'Loading...';
-                    changeSite(savedSite);
+                    document.getElementById('currentSite').innerText = savedSite;
                 }
             } else {
-                dropdown.innerHTML = `<a href="#">No sites configured</a>`;
-                document.getElementById('currentSite').innerText = 'No Sites';
+                if (isAdmin) {
+                    dropdown.innerHTML = `<a href="#">No sites configured (Admin mode)</a>`;
+                    document.getElementById('currentSite').innerText = 'Admin Mode';
+                } else {
+                    dropdown.innerHTML = `<a href="#">No sites assigned</a>`;
+                    document.getElementById('currentSite').innerText = 'No Sites';
+                }
             }
         }
 
         // Initialize Settings
         document.addEventListener("DOMContentLoaded", () => {
-            loadUserSites();
+            if (checkAuth()) {
+                loadUserSites();
+            }
 
             let savedTheme = localStorage.getItem('theme') || 'system';
             applyTheme(savedTheme);

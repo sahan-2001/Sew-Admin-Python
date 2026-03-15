@@ -191,8 +191,9 @@
 <div id="createSiteModal" class="modal">
     <div class="modal-content">
         <span class="close-modal" onclick="closeModal('createSiteModal')">&times;</span>
-        <h2><i class="fa-solid fa-plus"></i> Create Site</h2>
+        <h2 id="siteModalTitle"><i class="fa-solid fa-plus"></i> Create Site</h2>
         <br>
+        <input type="hidden" id="edit_site_id" />
         <div class="form-group">
             <label>Site Name</label>
             <input type="text" id="site_name" />
@@ -201,7 +202,7 @@
             <label>Site Type</label>
             <select id="site_type"></select>
         </div>
-        <button class="btn btn-primary" style="width:100%" onclick="submitCreateSite()">Create Site</button>
+        <button class="btn btn-primary" id="siteModalBtn" style="width:100%" onclick="submitCreateSite()">Create Site</button>
     </div>
 </div>
 
@@ -443,6 +444,7 @@
                             <td>${typeLabel}</td>
                             <td class="action-cell">
                                 <button class="btn btn-sm glass-btn" onclick="openAssignUsersModal(${s.id})"><i class="fa-solid fa-users"></i> Users</button>
+                                <button class="icon-btn edit-btn" onclick="openEditSiteModal(${s.id}, '${s.name}', '${s.site_type}')"><i class="fa-solid fa-pen"></i></button>
                                 <button class="icon-btn danger-btn" onclick="deleteSite(${s.id})"><i class="fa-solid fa-trash"></i></button>
                             </td>
                         </tr>
@@ -460,6 +462,9 @@
     }
 
     async function openCreateSiteModal() {
+        document.getElementById('siteModalTitle').innerHTML = '<i class="fa-solid fa-plus"></i> Create Site';
+        document.getElementById('siteModalBtn').innerText = 'Create Site';
+        document.getElementById('edit_site_id').value = '';
         document.getElementById('site_name').value = '';
         const select = document.getElementById('site_type');
         select.innerHTML = '';
@@ -467,13 +472,27 @@
         openModal('createSiteModal');
     }
 
+    async function openEditSiteModal(id, name, type) {
+        document.getElementById('siteModalTitle').innerHTML = '<i class="fa-solid fa-pen"></i> Edit Site';
+        document.getElementById('siteModalBtn').innerText = 'Save Changes';
+        document.getElementById('edit_site_id').value = id;
+        document.getElementById('site_name').value = name;
+        const select = document.getElementById('site_type');
+        select.innerHTML = '';
+        siteTypesList.forEach(t => { select.innerHTML += `<option value="${t.value}" ${t.value === type ? 'selected' : ''}>${t.label}</option>`; });
+        openModal('createSiteModal');
+    }
+
     async function submitCreateSite() {
+        const id = document.getElementById('edit_site_id').value;
         const name = document.getElementById('site_name').value;
         const type = document.getElementById('site_type').value;
         if (!name) return alert("Please enter a site name");
         try {
-            const res = await fetch('/api/settings/sites', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
+            const url = id ? `/api/settings/sites/${id}` : '/api/settings/sites';
+            const method = id ? 'PUT' : 'POST';
+            const res = await fetch(url, {
+                method: method, headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: name, site_type: type })
             });
             if (!res.ok) alert("Error: " + (await res.json()).detail);
@@ -490,9 +509,18 @@
         } catch (e) { alert("Network Error"); }
     }
 
+    async function fetchData(url, options = {}) {
+        const token = localStorage.getItem("token");
+        if(token) {
+            options.headers = options.headers || {};
+            options.headers["Authorization"] = "Bearer " + token;
+        }
+        return fetch(url, options);
+    }
+
     async function loadAllUsers() {
         try {
-            const res = await fetch('/api/users/');
+            const res = await fetchData('/api/users/');
             if(res.ok) allUsersList = await res.json();
         } catch (e) { console.error("Error loading users:", e); }
     }
