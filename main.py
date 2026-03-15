@@ -16,6 +16,18 @@ from modules.production.router import router as production_router
 from modules.employees.router import router as employees_router
 from modules.reports.router import router as reports_router
 
+import modules.settings.router
+import modules.sales.router
+import modules.purchasing.router
+import modules.warehouse.router
+import modules.items.router
+
+from modules.settings.router import router as settings_router
+from modules.sales.router import router as sales_router
+from modules.purchasing.router import router as purchasing_router
+from modules.warehouse.router import router as warehouse_router
+from modules.items.router import router as items_router
+
 # Ensure all Models are loaded for SQL tables auto-creation
 import modules.settings.models
 import modules.purchasing.models
@@ -24,6 +36,8 @@ import modules.production.models
 import modules.inventory.models
 import modules.accounting.models
 import modules.users.models
+import modules.customers.models
+import modules.warehouse.models
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -49,6 +63,11 @@ app.include_router(suppliers_router, prefix="/api/suppliers", tags=["Suppliers"]
 app.include_router(production_router, prefix="/api/production", tags=["Production"])
 app.include_router(employees_router, prefix="/api/employees", tags=["Employees"])
 app.include_router(reports_router, prefix="/api/reports", tags=["Reports"])
+app.include_router(settings_router, prefix="/api/settings", tags=["Settings"])
+app.include_router(sales_router, prefix="/api/sales", tags=["Sales"])
+app.include_router(purchasing_router, prefix="/api/purchasing", tags=["Purchasing"])
+app.include_router(items_router, prefix="/api/items", tags=["Items"])
+app.include_router(warehouse_router, prefix="/api/warehouse", tags=["Warehouse"])
 
 @app.get("/", response_class=HTMLResponse)
 def read_root(request: Request):

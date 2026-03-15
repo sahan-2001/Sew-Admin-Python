@@ -35,14 +35,13 @@
             <div class="dropdown">
                 <button class="nav-item dropbtn" style="background:transparent; border:none; cursor:pointer;"
                     id="siteSelectorBtn">
-                    <i class="fa-solid fa-location-dot"></i> <span id="currentSite">Head Office</span> <i
-                        class="fa-solid fa-chevron-down" style="font-size:0.8rem"></i>
+                    <i class="fa-solid fa-location-dot" style="color:var(--accent-primary)"></i>
+                    <span id="currentSite" style="font-weight:600;">Loading...</span>
+                    <i class="fa-solid fa-chevron-down" style="font-size:0.75rem; opacity:0.6"></i>
                 </button>
                 <div class="dropdown-content glass" id="siteDropdown">
-                    <a href="#" onclick="changeSite('Head Office')">Head Office</a>
-                    <a href="#" onclick="changeSite('Factory 1')">Factory 1</a>
-                    <a href="#" onclick="changeSite('Warehouse 1')">Warehouse 1</a>
-                    <a href="#" onclick="changeSite('Warehouse 2')">Warehouse 2</a>
+                    <!-- Sites injected via JS -->
+                    <a href="#">Loading...</a>
                 </div>
             </div>
 
@@ -64,24 +63,98 @@
                     style="cursor:pointer; padding-left:1.5rem; border-left:1px solid var(--border-glass);">
                     <img src="https://ui-avatars.com/api/?name=Admin+User&background=2563eb&color=fff" alt="User"
                         class="avatar">
-                    <span>Admin</span>
+                    <span id="usernameDisplay">Admin</span>
                 </div>
                 <!-- Top right corner hover account settings dropdown -->
                 <div class="dropdown-content glass text-sm"
                     style="right:0; left:auto; min-width: 200px; padding: 10px;">
                     <div style="padding: 10px; border-bottom: 1px solid var(--border-glass); margin-bottom: 5px;">
-                        <strong style="color:var(--text-main);">admin / CEO</strong>
-                        <div style="color:var(--text-muted); font-size: 0.8rem; margin-top:2px;">root-admin@sewadmin.com
+                        <strong id="userRoleDisplay">admin / CEO</strong>
+                        <div id="userEmailDisplay" style="color:var(--text-muted); font-size: 0.8rem; margin-top:2px;">
+                            root-admin@sewadmin.com
                         </div>
                     </div>
                     <a href="/api/users/settings"><i class="fa-solid fa-user-gear"></i> Account Settings</a>
                     <a href="/api/users/logs"><i class="fa-solid fa-clock-rotate-left"></i> Activity Logs</a>
-                    <a href="/api/users/logout" style="color:var(--danger);"><i
+                    <a href="#" onclick="logout()" style="color:var(--danger);"><i
                             class="fa-solid fa-arrow-right-from-bracket"></i> Sign Out</a>
                 </div>
             </div>
         </div>
     </nav>
+
+    <script>
+        // Check if user is logged in
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            const currentPath = window.location.pathname;
+
+            // List of paths that don't require authentication
+            const publicPaths = ['/api/users/login', '/register', '/forgot-password'];
+
+            if (!token && !publicPaths.includes(currentPath) && currentPath !== '/') {
+                window.location.href = '/api/users/login';
+                return false;
+            }
+            return true;
+        }
+
+        // Logout function
+        async function logout() {
+            try {
+                const token = localStorage.getItem('token');
+                if (token) {
+                    await fetch('/api/users/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+            } finally {
+                localStorage.removeItem('token');
+                localStorage.removeItem('selectedSite');
+                localStorage.removeItem('userData');
+                window.location.href = '/api/users/login';
+            }
+        }
+
+        // Global Authenticated Fetch Helper
+        async function apiFetch(url, options = {}) {
+            const token = localStorage.getItem('token');
+            if (token) {
+                options.headers = options.headers || {};
+                options.headers['Authorization'] = 'Bearer ' + token;
+            }
+            const response = await fetch(url, options);
+            if (response.status === 401) {
+                // If unauthorized, redirect to login
+                logout();
+            }
+            return response;
+        }
+
+        // -----------------------------------------------------------------------
+        // Site Selection Logic
+        // -----------------------------------------------------------------------
+
+        // Returns the saved site object {id, name} or null
+        function getSavedSite() {
+            try { return JSON.parse(localStorage.getItem('selectedSite')); } catch { return null; }
+        }
+
+        function applyTheme(theme) {
+            if (theme === 'system') {
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                document.body.className = prefersDark ? 'dark-mode' : 'light-mode';
+            } else {
+                document.body.className = theme + '-mode';
+            }
+        }
+    </script>
 
     <!-- Main Container -->
     <div class="container">
@@ -95,7 +168,9 @@
                             class="fa-solid fa-money-check-dollar"></i> Sales & CRM</a></li>
                 <li><a href="/api/purchasing/" class="{% block side_purchasing %}{% endblock %}"><i
                             class="fa-solid fa-cart-shopping"></i> Purchasing</a></li>
-                <li><a href="/api/inventory/" class="{% block side_inventory %}{% endblock %}"><i
+                <li><a href="/api/items/" class="{% block side_items %}{% endblock %}"><i
+                            class="fa-solid fa-boxes-packing"></i> Master Items</a></li>
+                <li><a href="/api/warehouse/" class="{% block side_inventory %}{% endblock %}"><i
                             class="fa-solid fa-warehouse"></i> Inventory & WH</a></li>
                 <li><a href="/api/production/" class="{% block side_production %}{% endblock %}"><i
                             class="fa-solid fa-industry"></i> Production</a></li>
@@ -115,10 +190,103 @@
     </div>
 
     <script>
+        // Check if user is logged in
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            const currentPath = window.location.pathname;
+
+            // List of paths that don't require authentication
+            const publicPaths = ['/api/users/login', '/register', '/forgot-password'];
+
+            if (!token && !publicPaths.includes(currentPath) && currentPath !== '/') {
+                window.location.href = '/api/users/login';
+                return false;
+            }
+            return true;
+        }
+
+        // Logout function
+        async function logout() {
+            try {
+                const token = localStorage.getItem('token');
+                if (token) {
+                    await fetch('/api/users/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+            } finally {
+                localStorage.removeItem('token');
+                localStorage.removeItem('selectedSite');
+                localStorage.removeItem('userData');
+                window.location.href = '/api/users/login';
+            }
+        }
+
+        // Global Authenticated Fetch Helper
+        async function apiFetch(url, options = {}) {
+            const token = localStorage.getItem('token');
+            if (token) {
+                options.headers = options.headers || {};
+                options.headers['Authorization'] = 'Bearer ' + token;
+            }
+            const response = await fetch(url, options);
+            if (response.status === 401) {
+                // If unauthorized, redirect to login
+                logout();
+            }
+            return response;
+        }
+
+        // -----------------------------------------------------------------------
         // Site Selection Logic
-        function changeSite(siteName) {
-            document.getElementById('currentSite').innerText = siteName;
-            localStorage.setItem('selectedSite', siteName);
+        // -----------------------------------------------------------------------
+
+        // Returns the saved site object {id, name} or null
+        function getSavedSite() {
+            try { return JSON.parse(localStorage.getItem('selectedSite')); } catch { return null; }
+        }
+
+        function changeSite(site, skipConfirm) {
+            // site = {id, name, site_type}
+            const current = getSavedSite();
+            
+            // Always update the UI text to ensure "Loading..." is replaced
+            document.getElementById('currentSite').innerText = site.name;
+            window.activeSiteId = site.id;
+
+            const isSame = current && current.id === site.id;
+            
+            const doChange = () => {
+                localStorage.setItem('selectedSite', JSON.stringify(site));
+                
+                // Persist to server
+                const token = localStorage.getItem('token');
+                if (token) {
+                    fetch('/api/users/me/site', {
+                        method: 'PUT',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ site_id: site.id })
+                    }).catch(e => console.warn('Could not persist site selection:', e));
+                }
+
+                if (!skipConfirm) {
+                    window.location.reload();
+                }
+            };
+
+            if (isSame) return;
+
+            if (skipConfirm) {
+                doChange();
+            } else {
+                doChange();
+            }
         }
 
         // Theme Selection Logic
@@ -136,10 +304,103 @@
             }
         }
 
+        async function loadUserSites() {
+            const token = localStorage.getItem('token') || '';
+
+            // Check if we're on a page that doesn't need site data
+            const currentPath = window.location.pathname;
+            const publicPaths = ['/api/users/login', '/register', '/forgot-password'];
+            if (publicPaths.includes(currentPath)) return;
+
+            if (!token) { window.location.href = '/api/users/login'; return; }
+
+            const headers = { 'Authorization': `Bearer ${token}` };
+            let sites = [];
+            let userRole = null;
+            let userData = null;
+
+            try {
+                const res = await fetch('/api/users/me', { headers });
+                if (res.ok) {
+                    userData = await res.json();
+                    sites = userData.available_sites || [];
+                    userRole = userData.role;
+
+                    // Update navbar user info
+                    const nameEl = document.getElementById('usernameDisplay');
+                    if (nameEl) nameEl.innerText = userData.username;
+                    const roleEl = document.querySelector('#userRoleDisplay');
+                    if (roleEl) roleEl.innerText = userData.username + ' / ' + userData.role;
+                    const emailEl = document.getElementById('userEmailDisplay');
+                    if (emailEl) emailEl.innerText = userData.email || 'No email';
+
+                    if (userData.theme_preference) setTheme(userData.theme_preference);
+
+                    // Determine the site to activate
+                    let savedSite = getSavedSite();
+                    let activeSite = null;
+
+                    if (sites.length > 0) {
+                        if (savedSite) {
+                            activeSite = sites.find(s => s.id === savedSite.id) || null;
+                        }
+                        if (!activeSite && userData.default_site_id) {
+                            activeSite = sites.find(s => s.id === userData.default_site_id) || null;
+                        }
+                        if (!activeSite) activeSite = sites[0];
+
+                        window.activeSiteId = activeSite.id;
+                        changeSite(activeSite, true);
+                    }
+
+                } else if (res.status === 401) {
+                    logout(); return;
+                }
+            } catch (e) {
+                console.error('Error loading user data:', e);
+            }
+
+            // Restrict settings page
+            const isSettingsPage = window.location.pathname.startsWith('/api/settings');
+            const isAdmin = userRole && (userRole.toLowerCase() === 'admin');
+
+            if (isSettingsPage && !isAdmin && sites.length === 0) {
+                alert('Access denied. You need to be assigned to at least one site.');
+                window.location.href = '/';
+                return;
+            }
+
+            // Populate site dropdown
+            const dropdown = document.getElementById('siteDropdown');
+            if (dropdown) {
+                dropdown.innerHTML = '';
+                if (sites && sites.length > 0) {
+                    sites.forEach(s => {
+                        const typeIcon = {
+                            shop: 'fa-store', head_office: 'fa-building', branch: 'fa-code-branch',
+                            outlet: 'fa-tag', warehouse: 'fa-warehouse', admin_office: 'fa-briefcase', other: 'fa-location-dot'
+                        }[s.site_type] || 'fa-location-dot';
+                        dropdown.innerHTML += `
+                            <a href="#" onclick="changeSite({id:${s.id},name:'${s.name.replace(/'/g, "\\'")}'})" 
+                               style="display:flex;align-items:center;gap:8px;" 
+                               id="site-opt-${s.id}">
+                                <i class="fa-solid ${typeIcon}" style="width:16px;text-align:center;opacity:0.7;"></i>
+                                ${s.name}
+                            </a>`;
+                    });
+                } else {
+                    const label = isAdmin ? 'No sites configured (Admin mode)' : 'No sites assigned';
+                    dropdown.innerHTML = `<a href="#" style="opacity:0.6;">${label}</a>`;
+                    document.getElementById('currentSite').innerText = isAdmin ? 'Admin Mode' : 'No Sites';
+                }
+            }
+        }
+
         // Initialize Settings
         document.addEventListener("DOMContentLoaded", () => {
-            let savedSite = localStorage.getItem('selectedSite') || 'Head Office';
-            changeSite(savedSite);
+            if (checkAuth()) {
+                loadUserSites();
+            }
 
             let savedTheme = localStorage.getItem('theme') || 'system';
             applyTheme(savedTheme);
