@@ -1,6 +1,6 @@
 import enum
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Float, Enum, Text, JSON
-from core.database import Base
+from core.database import Base, TimestampMixin
 from datetime import datetime
 
 class SalesType(str, enum.Enum):
@@ -17,7 +17,7 @@ class SalesStatus(str, enum.Enum):
     SHIPPED = "Shipped"
     INVOICED = "Invoiced"
 
-class SalesOrder(Base):
+class SalesOrder(TimestampMixin, Base):
     __tablename__ = "sales_orders"
     id = Column(Integer, primary_key=True, index=True)
     so_number = Column(String(50), unique=True, index=True)
@@ -31,7 +31,7 @@ class SalesOrder(Base):
     delivery_term_id = Column(Integer, ForeignKey("delivery_terms.id"), nullable=True)
     payment_term_id = Column(Integer, ForeignKey("payment_terms.id"), nullable=True)
 
-class SalesOrderLine(Base):
+class SalesOrderLine(TimestampMixin, Base):
     __tablename__ = "sales_order_lines"
     id = Column(Integer, primary_key=True, index=True)
     so_id = Column(Integer, ForeignKey("sales_orders.id"))
@@ -47,7 +47,7 @@ class SalesOrderLine(Base):
     unit_price = Column(Float, default=0.0)
     quantity = Column(Integer, default=0)
 
-class Shipment(Base):
+class Shipment(TimestampMixin, Base):
     __tablename__ = "shipments"
     id = Column(Integer, primary_key=True, index=True)
     so_id = Column(Integer, ForeignKey("sales_orders.id"))

@@ -56,17 +56,29 @@
                     <tr>
                         <th>User</th>
                         <th>Role</th>
+                        <th>Assigned Sites</th>
                         <th>Module Permissions</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="users_tbody">
                     <tr>
-                        <td colspan="4" style="text-align: center;">Loading...</td>
+                        <td colspan="5" style="text-align: center;">Loading...</td>
                     </tr>
                 </tbody>
             </table>
         </div>
+    </div>
+</div>
+
+<!-- Sites Management Panel (Admin only) -->
+<div class="data-panel glass" id="sitesPanel" style="margin-top: 1.5rem;">
+    <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <h3><i class="fa-solid fa-location-dot"></i> Sites Management</h3>
+        <button class="btn btn-primary glass-btn" onclick="openSiteModal()"><i class="fa-solid fa-plus"></i> New Site</button>
+    </div>
+    <div id="sitesContainer" style="padding: 1rem;">
+        <p style="color: var(--text-muted); text-align:center;">Loading sites...</p>
     </div>
 </div>
 
@@ -111,6 +123,32 @@
             <small style="color: var(--text-muted);">e.g. {"sales": ["create", "edit", "view"]}</small>
         </div>
         <button class="btn btn-primary" id="userModalBtn" style="width:100%" onclick="saveUser()">Create User</button>
+    </div>
+</div>
+
+<!-- Site Modal -->
+<div id="siteModal" class="modal">
+    <div class="modal-content" style="max-width: 420px;">
+        <span class="close-modal" onclick="closeSiteModal()">&times;</span>
+        <h2><i class="fa-solid fa-location-dot"></i> Create Site</h2>
+        <br>
+        <div class="form-group">
+            <label>Site Name</label>
+            <input type="text" id="site_name" placeholder="e.g. Head Office, Factory 1" />
+        </div>
+        <div class="form-group">
+            <label>Site Type</label>
+            <select id="site_type">
+                <option value="head_office">Head Office</option>
+                <option value="branch">Branch</option>
+                <option value="shop">Shop</option>
+                <option value="outlet">Outlet</option>
+                <option value="warehouse">Warehouse</option>
+                <option value="admin_office">Admin Office</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="saveSite()">Create Site</button>
     </div>
 </div>
 
@@ -244,7 +282,7 @@
 
     async function loadUsers() {
         if(myProfile && (myProfile.role.toLowerCase() !== "admin")) {
-            document.getElementById("users_tbody").innerHTML = "<tr><td colspan='4' style='text-align:center;'>You do not have permission to view users.</td></tr>";
+            document.getElementById("users_tbody").innerHTML = "<tr><td colspan='5' style='text-align:center;'>You do not have permission to view users.</td></tr>";
             return;
         }
         try {
@@ -254,7 +292,6 @@
                 const tbody = document.getElementById("users_tbody");
                 tbody.innerHTML = "";
                 
-                // Expose function globally if inside a module, but here it's global script
                 window.usersList = users;
 
                 users.forEach(u => {
@@ -276,10 +313,25 @@
 
                     const permsStr = JSON.stringify(u.permissions || {}).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 
+                    // Build sites display
+                    let sitesHtml = "<div style='display:flex;gap:4px;flex-wrap:wrap;'>";
+                    if(u.available_sites && u.available_sites.length > 0) {
+                        u.available_sites.forEach(s => {
+                            sitesHtml += `<span class='badge' style='background:rgba(37,99,235,0.25);color:#60a5fa;font-size:0.75rem;'>
+                                <i class='fa-solid fa-location-dot' style='font-size:0.7rem;'></i> ${s.name}
+                                <span onclick="unassignUserSite(${s.id},${u.id})" style='cursor:pointer;margin-left:4px;opacity:0.7;' title='Remove'>&#x2715;</span>
+                            </span>`;
+                        });
+                    } else {
+                        sitesHtml += `<span style='color:var(--text-muted);font-size:0.8rem;'>None</span>`;
+                    }
+                    sitesHtml += `<button class='icon-btn' style='padding:2px 6px;font-size:0.75rem;' title='Assign site' onclick='openAssignSiteModal(${u.id})'><i class='fa-solid fa-plus'></i></button></div>`;
+
                     tbody.innerHTML += `
                         <tr>
                             <td><strong>${u.username}</strong><br><small>${u.email || ''}</small>${!u.is_active ? ' <span style="color:var(--danger)">(Inactive)</span>' : ''}</td>
                             <td><span class="${roleBadgeClass}">${u.role.charAt(0).toUpperCase() + u.role.slice(1)}</span></td>
+                            <td>${sitesHtml}</td>
                             <td>${permsHtml}</td>
                             <td class="action-cell">
                                 <button class="icon-btn edit-btn" title="Edit User" onclick="openEditUserModal(${u.id}, '${u.username}', '${u.email || ''}', '${u.role}', ${u.is_active}, '${permsStr}')"><i class="fa-solid fa-pen"></i></button>
@@ -289,7 +341,7 @@
                     `;
                 });
             } else if(res.status === 403) {
-                 document.getElementById("users_tbody").innerHTML = "<tr><td colspan='4' style='text-align:center;'>You do not have permission to view users.</td></tr>";
+                 document.getElementById("users_tbody").innerHTML = "<tr><td colspan='5' style='text-align:center;'>You do not have permission to view users.</td></tr>";
             }
         } catch(e) { console.error("Error loading users:", e); }
     }
@@ -381,9 +433,149 @@
         } catch(e) { alert("Network error"); }
     }
 
+    // -----------------------------------------------------------------------
+    // Site Management
+    // -----------------------------------------------------------------------
+
+    let allSites = [];
+
+    async function loadSites() {
+        if(!myProfile || myProfile.role.toLowerCase() !== 'admin') {
+            document.getElementById('sitesPanel').style.display = 'none';
+            return;
+        }
+        try {
+            const res = await fetchData('/api/users/sites');
+            if(res.ok) {
+                allSites = await res.json();
+                renderSites(allSites);
+            }
+        } catch(e) { console.error('Error loading sites:', e); }
+    }
+
+    const SITE_TYPE_ICONS = {
+        shop: 'fa-store', head_office: 'fa-building', branch: 'fa-code-branch',
+        outlet: 'fa-tag', warehouse: 'fa-warehouse', admin_office: 'fa-briefcase', other: 'fa-location-dot'
+    };
+    const SITE_TYPE_LABELS = {
+        shop: 'Shop', head_office: 'Head Office', branch: 'Branch',
+        outlet: 'Outlet', warehouse: 'Warehouse', admin_office: 'Admin Office', other: 'Other'
+    };
+
+    function renderSites(sites) {
+        const container = document.getElementById('sitesContainer');
+        if(!sites || sites.length === 0) {
+            container.innerHTML = '<p style="color:var(--text-muted);text-align:center;">No sites yet. Create one above.</p>';
+            return;
+        }
+        const users = window.usersList || [];
+        let html = '<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap:1rem;">';
+        sites.forEach(site => {
+            const icon = SITE_TYPE_ICONS[site.site_type] || 'fa-location-dot';
+            const label = SITE_TYPE_LABELS[site.site_type] || site.site_type;
+            // Users assigned to this site
+            const assignedUsers = users.filter(u => u.available_sites && u.available_sites.find(s => s.id === site.id));
+            let usersHtml = assignedUsers.length > 0
+                ? assignedUsers.map(u => `<span class='badge' style='background:rgba(16,185,129,0.2);color:#34d399;'>
+                    <i class='fa-solid fa-user' style='font-size:0.7rem;'></i> ${u.username}
+                    <span onclick="unassignUserSite(${site.id},${u.id})" style='cursor:pointer;margin-left:3px;opacity:0.7;' title='Remove'>&#x2715;</span>
+                    </span>`).join('')
+                : '<span style="color:var(--text-muted);font-size:0.8rem;">No users assigned</span>';
+            html += `
+                <div class="glass" style="padding:1rem;border-radius:0.75rem;border:1px solid var(--border-glass);">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.75rem;">
+                        <div>
+                            <i class="fa-solid ${icon}" style="color:var(--accent-primary);margin-right:6px;"></i>
+                            <strong>${site.name}</strong>
+                            <div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px;">${label}</div>
+                        </div>
+                        <button class="icon-btn danger-btn" style="padding:4px 8px;" onclick="deleteSite(${site.id})" title="Delete site"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                    <div style="margin-bottom:0.5rem;">
+                        <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px;">Assigned Users:</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:4px;">${usersHtml}</div>
+                    </div>
+                    <div style="margin-top:0.75rem;">
+                        <select id="assign-select-${site.id}" style="padding:4px 8px;border-radius:6px;background:var(--bg-body);border:1px solid var(--border-glass);color:var(--text-main);font-size:0.8rem;">
+                            <option value="">-- Assign a user --</option>
+                            ${users.filter(u => !u.available_sites || !u.available_sites.find(s => s.id === site.id))
+                                .map(u => `<option value="${u.id}">${u.username}</option>`).join('')}
+                        </select>
+                        <button class="btn btn-primary" style="padding:4px 12px;margin-left:6px;font-size:0.8rem;" onclick="assignUserToSite(${site.id})">
+                            <i class="fa-solid fa-user-plus"></i> Assign
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    function openSiteModal() {
+        document.getElementById('site_name').value = '';
+        document.getElementById('site_type').value = 'head_office';
+        document.getElementById('siteModal').style.display = 'flex';
+    }
+    function closeSiteModal() { document.getElementById('siteModal').style.display = 'none'; }
+
+    async function saveSite() {
+        const name = document.getElementById('site_name').value.trim();
+        const site_type = document.getElementById('site_type').value;
+        if(!name) return alert('Site name is required.');
+        try {
+            const res = await fetchData('/api/users/sites', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name, site_type})
+            });
+            if(res.ok) {
+                closeSiteModal();
+                await loadSites();
+            } else {
+                alert('Error: ' + (await res.json()).detail);
+            }
+        } catch(e) { alert('Network error'); }
+    }
+
+    async function deleteSite(siteId) {
+        if(!confirm('Delete this site? Users will be unassigned.')) return;
+        try {
+            const res = await fetchData('/api/users/sites/' + siteId, { method: 'DELETE' });
+            if(res.ok) { await loadSites(); }
+            else alert('Error: ' + (await res.json()).detail);
+        } catch(e) { alert('Network error'); }
+    }
+
+    async function assignUserToSite(siteId) {
+        const userId = document.getElementById('assign-select-' + siteId).value;
+        if(!userId) return alert('Please select a user to assign.');
+        try {
+            const res = await fetchData(`/api/users/sites/${siteId}/assign/${userId}`, { method: 'POST' });
+            if(res.ok) { await Promise.all([loadUsers(), loadSites()]); }
+            else alert('Error: ' + (await res.json()).detail);
+        } catch(e) { alert('Network error'); }
+    }
+
+    async function unassignUserSite(siteId, userId) {
+        if(!confirm('Remove this user from the site?')) return;
+        try {
+            const res = await fetchData(`/api/users/sites/${siteId}/unassign/${userId}`, { method: 'DELETE' });
+            if(res.ok) { await Promise.all([loadUsers(), loadSites()]); }
+            else alert('Error: ' + (await res.json()).detail);
+        } catch(e) { alert('Network error'); }
+    }
+
+    function openAssignSiteModal(userId) {
+        // Quick assign: prompt via select in the sites panel
+        // Scroll to sites panel
+        document.getElementById('sitesPanel').scrollIntoView({behavior:'smooth'});
+    }
+
     document.addEventListener("DOMContentLoaded", async () => {
         await loadProfile();
-        loadUsers();
+        await loadUsers();
+        loadSites();
     });
 </script>
 {% endblock %}

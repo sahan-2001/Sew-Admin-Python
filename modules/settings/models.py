@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey
-from core.database import Base
+from core.database import Base, TimestampMixin
 
-class Currency(Base):
+class Currency(TimestampMixin, Base):
     __tablename__ = "currencies"
     id = Column(Integer, primary_key=True, index=True)
     code = Column(String(10), unique=True, index=True) # e.g. USD, LKR, EUR
@@ -9,43 +9,44 @@ class Currency(Base):
     symbol = Column(String(10))
     is_global_default = Column(Boolean, default=False)
 
-class Country(Base):
+class Country(TimestampMixin, Base):
     __tablename__ = "countries"
     id = Column(Integer, primary_key=True, index=True)
     code = Column(String(10), unique=True)
     name = Column(String(100))
 
-class VatGroup(Base):
+class VatGroup(TimestampMixin, Base):
     __tablename__ = "vat_groups"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(50)) # e.g. Standard, Exempt, Reduced
     percentage = Column(Float, default=0.0)
     group_type = Column(String(20)) # "Item", "Customer", "Supplier"
 
-class DeliveryTerm(Base):
+class DeliveryTerm(TimestampMixin, Base):
     __tablename__ = "delivery_terms"
     id = Column(Integer, primary_key=True, index=True)
     code = Column(String(20)) # e.g. FOB, CIF, EXW
     description = Column(String(255))
 
-class PaymentTerm(Base):
+class PaymentTerm(TimestampMixin, Base):
     __tablename__ = "payment_terms"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(50)) # e.g. Net 30, COD
     days = Column(Integer, default=0)
 
-class PaymentMethod(Base):
+class PaymentMethod(TimestampMixin, Base):
     __tablename__ = "payment_methods"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(50)) # e.g. Bank Transfer, Cash, Card
 
-class ItemCategory(Base):
+class ItemCategory(TimestampMixin, Base):
     __tablename__ = "item_categories"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), unique=True, index=True)
 
-class ItemSubCategory(Base):
+class ItemSubCategory(TimestampMixin, Base):
     __tablename__ = "item_sub_categories"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), index=True)
     category_id = Column(Integer, ForeignKey("item_categories.id"))
+

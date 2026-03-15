@@ -1,6 +1,6 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Float, Enum, DateTime, func
+from sqlalchemy import Column, Integer, String, ForeignKey, Float, Enum, DateTime, Boolean, func
 from sqlalchemy.orm import relationship
-from core.database import Base
+from core.database import Base, TimestampMixin
 import enum
 
 # -----------------------
@@ -14,7 +14,7 @@ class LocationType(str, enum.Enum):
 # -----------------------
 # Warehouse
 # -----------------------
-class Warehouse(Base):
+class Warehouse(TimestampMixin, Base):
     __tablename__ = "warehouses"
 
     id = Column(Integer, primary_key=True)
@@ -31,7 +31,7 @@ class Warehouse(Base):
 # -----------------------
 # Inventory Location
 # -----------------------
-class InventoryLocation(Base):
+class InventoryLocation(TimestampMixin, Base):
     __tablename__ = "inventory_locations"
 
     id = Column(Integer, primary_key=True)
@@ -47,7 +47,6 @@ class InventoryLocation(Base):
     def __repr__(self):
         return f"<InventoryLocation {self.name} ({self.location_type})>"
 
-from sqlalchemy import Column, Integer, String, ForeignKey, Float, Enum, DateTime, Boolean, func
 
 class ItemType(str, enum.Enum):
     INVENTORY = "inventory"
@@ -56,7 +55,7 @@ class ItemType(str, enum.Enum):
 # -----------------------
 # Item
 # -----------------------
-class WarehouseItem(Base):
+class WarehouseItem(TimestampMixin, Base):
     """
     Independent item model specifically for the warehouse module.
     Could be linked to global items if needed.
@@ -88,7 +87,7 @@ class JournalType(str, enum.Enum):
     DECREMENT = "decrement"
     ADJUSTMENT = "adjustment"
 
-class WarehouseItemJournal(Base):
+class WarehouseItemJournal(TimestampMixin, Base):
     __tablename__ = "item_journals"
 
     id = Column(Integer, primary_key=True)
@@ -97,19 +96,18 @@ class WarehouseItemJournal(Base):
     journal_type = Column(Enum(JournalType), nullable=False)
     qty = Column(Float, nullable=False)
     reference = Column(String(100), nullable=True)  # e.g., PO number, shipment
-    created_at = Column(DateTime, server_default=func.now())
 
     # Relationships
     item = relationship("WarehouseItem", back_populates="item_journals")
     location = relationship("InventoryLocation", back_populates="item_journals")
 
     def __repr__(self):
-        return f"<WarehouseItemJournal {self.item.sku} {self.journal_type} {self.qty}>"
+        return f"<WarehouseItemJournal {self.item_id} {self.journal_type} {self.qty}>"
 
 # -----------------------
 # Physical Inventory Adjustment
 # -----------------------
-class PhysicalInventory(Base):
+class PhysicalInventory(TimestampMixin, Base):
     __tablename__ = "physical_inventory"
 
     id = Column(Integer, primary_key=True)
@@ -118,7 +116,6 @@ class PhysicalInventory(Base):
     counted_qty = Column(Float, nullable=False)
     system_qty = Column(Float, nullable=False)
     adjustment_qty = Column(Float, nullable=False)  # counted - system
-    created_at = Column(DateTime, server_default=func.now())
     reference = Column(String(100), nullable=True)  # e.g., inventory cycle count
 
     # Relationships
@@ -126,4 +123,4 @@ class PhysicalInventory(Base):
     location = relationship("InventoryLocation")
 
     def __repr__(self):
-        return f"<PhysicalInventory {self.item.sku} adjusted {self.adjustment_qty}>"
+        return f"<PhysicalInventory item_id={self.item_id} adjusted {self.adjustment_qty}>"

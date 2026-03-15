@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from sqlalchemy_utils import StringEncryptedType
 from sqlalchemy_utils.types.encrypted.encrypted_type import FernetEngine
-from core.database import Base
+from core.database import Base, TimestampMixin
 from core.config import settings
 
 secret_key = settings.SECRET_KEY
@@ -36,6 +36,15 @@ class Site(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), unique=True, index=True) # e.g. Factory 1, Head Office
     site_type = Column(Enum(SiteType), default=SiteType.OTHER)
+
+    # Audit fields (no site_id FK on Site itself – that would be circular)
+    created_at  = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_by  = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_at  = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=True)
+    updated_by  = Column(Integer, ForeignKey("users.id"), nullable=True)
+    deleted_at  = Column(DateTime, nullable=True)
+    deleted_by  = Column(Integer, ForeignKey("users.id"), nullable=True)
+
     users = relationship("User", secondary=user_sites, back_populates="available_sites")
 
 class User(Base):
@@ -55,6 +64,12 @@ class User(Base):
     
     # Granular permissions mapping JSON: e.g. {"sales_orders": ["create", "edit", "view"]}
     permissions = Column(JSON, nullable=True)
+
+    # Audit fields
+    created_at  = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at  = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=True)
+    deleted_at  = Column(DateTime, nullable=True)
+    deleted_by  = Column(Integer, nullable=True)
 
     available_sites = relationship("Site", secondary=user_sites, back_populates="users")
 

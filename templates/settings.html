@@ -13,7 +13,6 @@
 <div class="tabs-container glass" style="padding: 20px; border-radius: 12px;">
     <div
         style="display: flex; gap: 15px; border-bottom: 1px solid var(--border-glass); padding-bottom: 10px; margin-bottom: 20px;">
-        <button class="tab-btn active" onclick="switchTab(event, 'sites')">Sites & Locations</button>
         <button class="tab-btn" onclick="switchTab(event, 'currencies')">Currencies</button>
         <button class="tab-btn" onclick="switchTab(event, 'terms')">Payment Terms & Methods</button>
         <button class="tab-btn" onclick="switchTab(event, 'delivery')">Delivery Terms</button>
@@ -21,28 +20,6 @@
         <button class="tab-btn" onclick="switchTab(event, 'categories')">Categories</button>
     </div>
 
-    <!-- Sites Tab -->
-    <div id="sites" class="tab-content active">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h3>Company Sites</h3>
-            <button class="btn btn-primary glass-btn btn-sm" onclick="openCreateSiteModal()"><i class="fa-solid fa-plus"></i> Add Site</button>
-        </div>
-        <table class="modern-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Site Name</th>
-                    <th>Site Type</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="sites_tbody">
-                <tr>
-                    <td colspan="4" style="text-align: center;">Loading...</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
 
     <!-- Currencies Tab -->
     <div id="currencies" class="tab-content" style="display: none;">
@@ -202,7 +179,8 @@
             <label>Site Type</label>
             <select id="site_type"></select>
         </div>
-        <button class="btn btn-primary" id="siteModalBtn" style="width:100%" onclick="submitCreateSite()">Create Site</button>
+        <button class="btn btn-primary" id="siteModalBtn" style="width:100%" onclick="submitCreateSite()">Create
+            Site</button>
     </div>
 </div>
 
@@ -426,92 +404,9 @@
         } catch (e) { alert("Network Error"); }
     }
 
-    async function loadSites() {
-        try {
-            const res = await fetch('/api/settings/sites');
-            const data = await res.json();
-            const tbody = document.getElementById('sites_tbody');
-            tbody.innerHTML = '';
-            if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center">No sites found.</td></tr>';
-            } else {
-                data.forEach(s => {
-                    const typeLabel = s.site_type.replace("_", " ").toUpperCase();
-                    tbody.innerHTML += `
-                        <tr>
-                            <td>${s.id}</td>
-                            <td>${s.name}</td>
-                            <td>${typeLabel}</td>
-                            <td class="action-cell">
-                                <button class="btn btn-sm glass-btn" onclick="openAssignUsersModal(${s.id})"><i class="fa-solid fa-users"></i> Users</button>
-                                <button class="icon-btn edit-btn" onclick="openEditSiteModal(${s.id}, '${s.name}', '${s.site_type}')"><i class="fa-solid fa-pen"></i></button>
-                                <button class="icon-btn danger-btn" onclick="deleteSite(${s.id})"><i class="fa-solid fa-trash"></i></button>
-                            </td>
-                        </tr>
-                    `;
-                });
-            }
-        } catch (e) { console.error("Error loading sites:", e); }
-    }
-
-    async function loadSiteTypes() {
-        try {
-            const res = await fetch('/api/settings/sites/types');
-            siteTypesList = await res.json();
-        } catch (e) { console.error("Error loading site types:", e); }
-    }
-
-    async function openCreateSiteModal() {
-        document.getElementById('siteModalTitle').innerHTML = '<i class="fa-solid fa-plus"></i> Create Site';
-        document.getElementById('siteModalBtn').innerText = 'Create Site';
-        document.getElementById('edit_site_id').value = '';
-        document.getElementById('site_name').value = '';
-        const select = document.getElementById('site_type');
-        select.innerHTML = '';
-        siteTypesList.forEach(t => { select.innerHTML += `<option value="${t.value}">${t.label}</option>`; });
-        openModal('createSiteModal');
-    }
-
-    async function openEditSiteModal(id, name, type) {
-        document.getElementById('siteModalTitle').innerHTML = '<i class="fa-solid fa-pen"></i> Edit Site';
-        document.getElementById('siteModalBtn').innerText = 'Save Changes';
-        document.getElementById('edit_site_id').value = id;
-        document.getElementById('site_name').value = name;
-        const select = document.getElementById('site_type');
-        select.innerHTML = '';
-        siteTypesList.forEach(t => { select.innerHTML += `<option value="${t.value}" ${t.value === type ? 'selected' : ''}>${t.label}</option>`; });
-        openModal('createSiteModal');
-    }
-
-    async function submitCreateSite() {
-        const id = document.getElementById('edit_site_id').value;
-        const name = document.getElementById('site_name').value;
-        const type = document.getElementById('site_type').value;
-        if (!name) return alert("Please enter a site name");
-        try {
-            const url = id ? `/api/settings/sites/${id}` : '/api/settings/sites';
-            const method = id ? 'PUT' : 'POST';
-            const res = await fetch(url, {
-                method: method, headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: name, site_type: type })
-            });
-            if (!res.ok) alert("Error: " + (await res.json()).detail);
-            else { closeModal('createSiteModal'); loadSites(); }
-        } catch (e) { alert("Network Error"); }
-    }
-
-    async function deleteSite(id) {
-        if (!confirm("Are you sure?")) return;
-        try {
-            const res = await fetch('/api/settings/sites/' + id, { method: 'DELETE' });
-            if (!res.ok) alert("Error: " + (await res.json()).detail);
-            else loadSites();
-        } catch (e) { alert("Network Error"); }
-    }
-
     async function fetchData(url, options = {}) {
         const token = localStorage.getItem("token");
-        if(token) {
+        if (token) {
             options.headers = options.headers || {};
             options.headers["Authorization"] = "Bearer " + token;
         }
@@ -521,48 +416,13 @@
     async function loadAllUsers() {
         try {
             const res = await fetchData('/api/users/');
-            if(res.ok) allUsersList = await res.json();
+            if (res.ok) allUsersList = await res.json();
         } catch (e) { console.error("Error loading users:", e); }
-    }
-
-    async function openAssignUsersModal(siteId) {
-        document.getElementById('assign_site_id').value = siteId;
-        const select = document.getElementById('assign_users_select');
-        select.innerHTML = '';
-        allUsersList.forEach(u => { select.innerHTML += `<option value="${u.id}">${u.username}</option>`; });
-        
-        try {
-            const res = await fetch('/api/settings/sites/' + siteId + '/users');
-            if (res.ok) {
-                const checkedUsers = await res.json();
-                const checkedIds = checkedUsers.map(u => u.id);
-                Array.from(select.options).forEach(opt => {
-                    if (checkedIds.includes(parseInt(opt.value))) opt.selected = true;
-                });
-            }
-        } catch(e) {}
-        openModal('assignUsersModal');
-    }
-
-    async function submitAssignUsers() {
-        const siteId = document.getElementById('assign_site_id').value;
-        const select = document.getElementById('assign_users_select');
-        const user_ids = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
-        try {
-            const res = await fetch('/api/settings/sites/' + siteId + '/assign_users', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_ids: user_ids })
-            });
-            if (!res.ok) alert("Error: " + (await res.json()).detail);
-            else closeModal('assignUsersModal');
-        } catch (e) { alert("Network Error"); }
     }
 
     document.addEventListener("DOMContentLoaded", () => {
         loadCategories();
         loadSubCategories();
-        loadSites();
-        loadSiteTypes();
         loadAllUsers();
     });
 </script>

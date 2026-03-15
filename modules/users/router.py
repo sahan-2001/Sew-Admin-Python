@@ -1,14 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta
+from typing import Optional
 
 from core.database import get_db
 from core.security import ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, verify_password, get_password_hash
 from core.dependencies import get_current_active_user, get_current_user, log_activity, require_permission
-from modules.users.models import User, ActivityLog
+from modules.users.models import User, ActivityLog, Site, SiteType, user_sites
 from modules.users.schemas import UserCreate, UserUpdate, UserProfileUpdate
 
 router = APIRouter()
@@ -61,8 +62,26 @@ def read_users_me(current_user: User = Depends(get_current_active_user)):
         "role": current_user.role, 
         "permissions": current_user.permissions,
         "theme_preference": current_user.theme_preference,
-        "available_sites": [{"id": s.id, "name": s.name} for s in current_user.available_sites]
+        "default_site_id": current_user.default_site_id,
+        "available_sites": [{"id": s.id, "name": s.name, "site_type": s.site_type} for s in current_user.available_sites]
     }
+
+@router.put("/me/site")
+def set_active_site(
+    site_id: Optional[int] = Body(None, embed=True),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Persist the user's currently selected site as their default_site_id."""
+    if site_id is not None:
+        # Verify user has access to this site (admin bypass)
+        if current_user.role != "admin":
+            allowed_ids = [s.id for s in current_user.available_sites]
+            if site_id not in allowed_ids:
+                raise HTTPException(status_code=403, detail="Site not assigned to this user")
+    current_user.default_site_id = site_id
+    db.commit()
+    return {"status": "success", "default_site_id": site_id}
 
 @router.put("/me/profile")
 def update_user_profile(
@@ -160,3 +179,118 @@ def get_recent_activity_logs(db: Session = Depends(get_db), current_user: User =
     else:
         logs = db.query(ActivityLog).order_by(ActivityLog.timestamp.desc()).limit(100).all()
     return logs
+
+# -----------------------------------------------------------------------
+# Site Management Endpoints
+# -----------------------------------------------------------------------
+
+@router.get("/sites")
+def list_sites(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Return all sites (admin) or only assigned sites (regular users)."""
+    if current_user.role == "admin":
+        sites = db.query(Site).filter(Site.deleted_at == None).all()
+    else:
+        sites = [s for s in current_user.available_sites]
+    return [
+        {"id": s.id, "name": s.name, "site_type": s.site_type}
+        for s in sites
+    ]
+
+@router.post("/sites")
+def create_site(
+    name: str = Body(..., embed=True),
+    site_type: str = Body("other", embed=True),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    existing = db.query(Site).filter(Site.name == name).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Site with this name already exists")
+    site = Site(name=name, site_type=site_type, created_by=current_user.id)
+    db.add(site)
+    db.commit()
+    db.refresh(site)
+    return {"status": "success", "id": site.id, "name": site.name}
+
+@router.put("/sites/{site_id}")
+def update_site(
+    site_id: int,
+    name: Optional[str] = Body(None, embed=True),
+    site_type: Optional[str] = Body(None, embed=True),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    site = db.query(Site).filter(Site.id == site_id, Site.deleted_at == None).first()
+    if not site:
+        raise HTTPException(status_code=404, detail="Site not found")
+    if name is not None:
+        site.name = name
+    if site_type is not None:
+        site.site_type = site_type
+    site.updated_by = current_user.id
+    db.commit()
+    return {"status": "success"}
+
+@router.delete("/sites/{site_id}")
+def delete_site(
+    site_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    from datetime import datetime
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    site = db.query(Site).filter(Site.id == site_id, Site.deleted_at == None).first()
+    if not site:
+        raise HTTPException(status_code=404, detail="Site not found")
+    site.deleted_at = datetime.utcnow()
+    site.deleted_by = current_user.id
+    db.commit()
+    return {"status": "success"}
+
+@router.post("/sites/{site_id}/assign/{user_id}")
+def assign_user_to_site(
+    site_id: int,
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    site = db.query(Site).filter(Site.id == site_id).first()
+    user = db.query(User).filter(User.id == user_id).first()
+    if not site or not user:
+        raise HTTPException(status_code=404, detail="Site or User not found")
+    if site not in user.available_sites:
+        user.available_sites.append(site)
+        db.commit()
+    # Auto-set default site if not already set
+    if user.default_site_id is None:
+        user.default_site_id = site_id
+        db.commit()
+    return {"status": "success"}
+
+@router.delete("/sites/{site_id}/unassign/{user_id}")
+def unassign_user_from_site(
+    site_id: int,
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    site = db.query(Site).filter(Site.id == site_id).first()
+    user = db.query(User).filter(User.id == user_id).first()
+    if not site or not user:
+        raise HTTPException(status_code=404, detail="Site or User not found")
+    if site in user.available_sites:
+        user.available_sites.remove(site)
+        db.commit()
+    return {"status": "success"}

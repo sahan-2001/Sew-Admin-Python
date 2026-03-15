@@ -2,7 +2,7 @@ import enum
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Float, Enum, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from core.database import Base
+from core.database import Base, TimestampMixin
 
 class MoveType(str, enum.Enum):
     PO_RECEIPT = "Purchase Order Receipt"
@@ -12,7 +12,7 @@ class MoveType(str, enum.Enum):
     SCRAP = "Scrap Sale"
     DESTROY = "Destroy/Write-off"
 
-class InventoryItem(Base):
+class InventoryItem(TimestampMixin, Base):
     __tablename__ = "items"
     id = Column(Integer, primary_key=True, index=True)
     sku = Column(String(50), unique=True, index=True)
@@ -28,15 +28,15 @@ class LocationType(str, enum.Enum):
     SHIPMENT = "Shipment"
     INTERNAL = "Internal"
 
-class Location(Base):
+class Location(TimestampMixin, Base):
     __tablename__ = "locations"
     id = Column(Integer, primary_key=True, index=True)
-    site_id = Column(Integer, ForeignKey("sites.id"))
     name = Column(String(100))
     loc_type = Column(Enum(LocationType), default=LocationType.INTERNAL)
     is_qc_required = Column(Boolean, default=False)
+    # Note: site_id comes from TimestampMixin, so it's already included
 
-class StockMovement(Base):
+class StockMovement(TimestampMixin, Base):
     __tablename__ = "stock_movements"
     id = Column(Integer, primary_key=True, index=True)
     item_id = Column(Integer, ForeignKey("items.id"))
@@ -47,7 +47,7 @@ class StockMovement(Base):
     timestamp = Column(DateTime, default=datetime.utcnow)
     reference = Column(String(100)) 
 
-class LocationStock(Base):
+class LocationStock(TimestampMixin, Base):
     __tablename__ = "location_stocks"
     id = Column(Integer, primary_key=True, index=True)
     location_id = Column(Integer, ForeignKey("locations.id"))

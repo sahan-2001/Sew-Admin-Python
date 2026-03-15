@@ -1,16 +1,16 @@
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Float, Enum, Text
-from core.database import Base
+from core.database import Base, TimestampMixin
 from datetime import datetime
 
-class Workcenter(Base):
+class Workcenter(TimestampMixin, Base):
     __tablename__ = "workcenters"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100)) # e.g. Cutting Section, Sewing Line 1
-    site_id = Column(Integer, ForeignKey("sites.id"))
+    # site_id comes from TimestampMixin
     cost_per_hour = Column(Float, default=0.0)
     is_active = Column(Boolean, default=True)
 
-class ProductionOrder(Base):
+class ProductionOrder(TimestampMixin, Base):
     __tablename__ = "production_orders"
     id = Column(Integer, primary_key=True, index=True)
     po_ref = Column(String(50), unique=True, index=True)
@@ -23,7 +23,7 @@ class ProductionOrder(Base):
     start_date = Column(DateTime)
     end_date = Column(DateTime, nullable=True)
 
-class Timesheet(Base):
+class Timesheet(TimestampMixin, Base):
     __tablename__ = "timesheets"
     id = Column(Integer, primary_key=True, index=True)
     production_order_id = Column(Integer, ForeignKey("production_orders.id"))
