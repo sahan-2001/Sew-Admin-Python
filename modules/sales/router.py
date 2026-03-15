@@ -7,7 +7,7 @@ from typing import List
 from core.database import get_db
 from core.dependencies import get_current_user, require_permission
 from modules.users.models import User
-from modules.sales.models import SalesOrder, SalesOrderLine, SalesStatus
+from modules.sales.models import SalesOrder, SalesOrderLine, SalesOrderVariation, SalesStatus
 from modules.sales.schemas import SalesOrderCreate, SalesOrderUpdate, SalesOrderResponse
 
 router = APIRouter()
@@ -37,7 +37,6 @@ def create_sales_order(
     db.commit()
     db.refresh(so)
     
-    lines_out = []
     for line in data.lines:
         db_line = SalesOrderLine(
             so_id=so.id,
@@ -51,11 +50,20 @@ def create_sales_order(
             line_total=line.line_total
         )
         db.add(db_line)
-        lines_out.append(db_line)
+        db.commit()
+        db.refresh(db_line)
+        
+        for var in line.variations:
+            db_var = SalesOrderVariation(
+                so_line_id=db_line.id,
+                color=var.color,
+                size=var.size,
+                quantity=var.quantity,
+                unit_price=var.unit_price
+            )
+            db.add(db_var)
     db.commit()
-    
-    # Attach for response
-    setattr(so, 'lines', lines_out)
+    db.refresh(so)
     return so
 
 @router.put("/orders/{so_id}", response_model=SalesOrderResponse)
@@ -76,10 +84,9 @@ def update_sales_order(
     so.order_type = data.order_type
     so.total_amount = data.total_amount
     
-    # Replace lines
+    # Replace lines and variations (cascading delete handles variants)
     db.query(SalesOrderLine).filter(SalesOrderLine.so_id == so_id).delete()
     
-    lines_out = []
     for line in data.lines:
         db_line = SalesOrderLine(
             so_id=so.id,
@@ -93,11 +100,21 @@ def update_sales_order(
             line_total=line.line_total
         )
         db.add(db_line)
-        lines_out.append(db_line)
+        db.commit()
+        db.refresh(db_line)
+        
+        for var in line.variations:
+            db_var = SalesOrderVariation(
+                so_line_id=db_line.id,
+                color=var.color,
+                size=var.size,
+                quantity=var.quantity,
+                unit_price=var.unit_price
+            )
+            db.add(db_var)
         
     db.commit()
     db.refresh(so)
-    setattr(so, 'lines', lines_out)
     return so
 
 @router.get("/orders", response_model=List[SalesOrderResponse])
@@ -106,14 +123,7 @@ def get_all_sales_orders(
     current_user: User = Depends(get_current_user)
 ):
     orders = db.query(SalesOrder).all()
-    # We will need customer names later so we just return the raw order 
-    # and the frontend can map customer names
-    out = []
-    for o in orders:
-        lines = db.query(SalesOrderLine).filter(SalesOrderLine.so_id == o.id).all()
-        setattr(o, 'lines', lines)
-        out.append(o)
-    return out
+    return orders
 
 @router.put("/orders/{so_id}/status", response_model=SalesOrderResponse)
 def update_sales_order_status(
@@ -131,7 +141,4 @@ def update_sales_order_status(
         
     db.commit()
     db.refresh(so)
-    
-    lines = db.query(SalesOrderLine).filter(SalesOrderLine.so_id == so.id).all()
-    setattr(so, 'lines', lines)
     return so

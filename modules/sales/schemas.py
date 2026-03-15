@@ -3,6 +3,21 @@ from typing import Optional, List, Any
 from datetime import datetime
 from modules.sales.models import SalesType, SalesStatus
 
+class SalesOrderVariationBase(BaseModel):
+    color: Optional[str] = None
+    size: Optional[str] = None
+    quantity: int = 0
+    unit_price: float = 0.0
+
+class SalesOrderVariationCreate(SalesOrderVariationBase):
+    pass
+
+class SalesOrderVariationResponse(SalesOrderVariationBase):
+    id: int
+    so_line_id: int
+    class Config:
+        from_attributes = True
+
 class SalesOrderLineBase(BaseModel):
     item_name: str
     item_id: Optional[int] = None
@@ -14,11 +29,12 @@ class SalesOrderLineBase(BaseModel):
     line_total: float = 0.0
 
 class SalesOrderLineCreate(SalesOrderLineBase):
-    pass
+    variations: List[SalesOrderVariationCreate] = []
 
 class SalesOrderLineResponse(SalesOrderLineBase):
     id: int
     so_id: int
+    variations: List[SalesOrderVariationResponse] = []
     class Config:
         from_attributes = True
 

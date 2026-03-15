@@ -1,5 +1,6 @@
 import enum
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Float, Enum, Text, JSON
+from sqlalchemy.orm import relationship
 from core.database import Base, TimestampMixin
 from datetime import datetime
 
@@ -32,6 +33,8 @@ class SalesOrder(TimestampMixin, Base):
     delivery_term_id = Column(Integer, ForeignKey("delivery_terms.id"), nullable=True)
     payment_term_id = Column(Integer, ForeignKey("payment_terms.id"), nullable=True)
 
+    lines = relationship("SalesOrderLine", back_populates="order", cascade="all, delete-orphan")
+
 class SalesOrderLine(TimestampMixin, Base):
     __tablename__ = "sales_order_lines"
     id = Column(Integer, primary_key=True, index=True)
@@ -50,10 +53,25 @@ class SalesOrderLine(TimestampMixin, Base):
     quantity = Column(Integer, default=0)
     line_total = Column(Float, default=0.0)
 
+    order = relationship("SalesOrder", back_populates="lines")
+    variations = relationship("SalesOrderVariation", back_populates="line", cascade="all, delete-orphan")
+
+class SalesOrderVariation(TimestampMixin, Base):
+    __tablename__ = "sales_order_variations"
+    id = Column(Integer, primary_key=True, index=True)
+    so_line_id = Column(Integer, ForeignKey("sales_order_lines.id"))
+    
+    color = Column(String(100), nullable=True)
+    size = Column(String(50), nullable=True)
+    quantity = Column(Integer, default=0)
+    unit_price = Column(Float, default=0.0)
+    
+    line = relationship("SalesOrderLine", back_populates="variations")
+
 class Shipment(TimestampMixin, Base):
     __tablename__ = "shipments"
     id = Column(Integer, primary_key=True, index=True)
     so_id = Column(Integer, ForeignKey("sales_orders.id"))
     ship_date = Column(DateTime, default=datetime.utcnow)
-    from_location_id = Column(Integer, ForeignKey("inventory_locations.id")) # Fixed to correct warehouse location table
+    from_location_id = Column(Integer, ForeignKey("inventory_locations.id")) 
     is_shipped = Column(Boolean, default=False)
