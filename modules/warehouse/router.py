@@ -125,6 +125,13 @@ def get_stock(
     if location_id:
         qty = service.get_location_stock(item_id, location_id)
         return {"item_id": item_id, "location_id": location_id, "qty_on_hand": qty}
-    
     qty = service.get_total_stock(item_id, warehouse_id)
     return {"item_id": item_id, "warehouse_id": warehouse_id, "qty_on_hand": qty}
+
+@router.get("/locations", response_model=List[InventoryLocationResponse])
+def get_locations(
+    db: Session = Depends(get_db),
+    cur: User = Depends(get_current_user)
+):
+    from modules.warehouse.models import InventoryLocation
+    return db.query(InventoryLocation).all()

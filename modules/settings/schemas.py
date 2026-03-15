@@ -62,3 +62,48 @@ class SiteResponse(SiteBase):
 
 class AssignUsersRequest(BaseModel):
     user_ids: List[int]
+
+# Company Info
+class CompanyInfoBase(BaseModel):
+    name: str
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    website: Optional[str] = None
+    tax_id: Optional[str] = None
+    logo_url: Optional[str] = None
+
+class CompanyInfoUpdate(CompanyInfoBase):
+    pass
+
+class CompanyInfoResponse(CompanyInfoBase):
+    id: int
+    class Config:
+        from_attributes = True
+
+# Approval Setup
+class ApprovalSetupBase(BaseModel):
+    document_type: str
+    requires_approval: bool
+
+class ApprovalSetupUpdate(ApprovalSetupBase):
+    pass
+
+class ApprovalSetupResponse(ApprovalSetupBase):
+    id: int
+    class Config:
+        from_attributes = True
+
+# Email Template
+class EmailTemplateBase(BaseModel):
+    name: str
+    subject: str
+    body_template: str
+
+class EmailTemplateUpdate(EmailTemplateBase):
+    pass
+
+class EmailTemplateResponse(EmailTemplateBase):
+    id: int
+    class Config:
+        from_attributes = True

@@ -133,3 +133,27 @@ class ActivityLog(Base):
     timestamp = Column(DateTime, default=datetime.utcnow)
     details = Column(Text)
 
+class CompanyInfo(TimestampMixin, Base):
+    __tablename__ = "company_info"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255))
+    address = Column(Text)
+    phone = Column(String(100))
+    email = Column(String(100))
+    website = Column(String(255))
+    tax_id = Column(String(50))
+    logo_url = Column(String(255))
+
+class ApprovalSetup(TimestampMixin, Base):
+    __tablename__ = "approval_setups"
+    id = Column(Integer, primary_key=True, index=True)
+    document_type = Column(String(100), unique=True) # e.g. "Sales Order"
+    requires_approval = Column(Boolean, default=True)
+
+class EmailTemplate(TimestampMixin, Base):
+    __tablename__ = "email_templates"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), unique=True) # e.g. "Sales Order Creation"
+    subject = Column(String(255))
+    body_template = Column(Text)
+

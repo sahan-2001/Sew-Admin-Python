@@ -9,13 +9,14 @@ class SalesType(str, enum.Enum):
     SCRAP = "Scrap Sale"
 
 class SalesStatus(str, enum.Enum):
-    QUOTATION = "Quotation"
-    PROFORMA = "Proforma Invoice"
-    SO_CONFIRMED = "SO Confirmed"
+    OPEN = "Open"
+    PENDING_APPROVAL = "Pending Approval"
+    RELEASED = "Released"
     IN_PRODUCTION = "In Production"
     READY_TO_SHIP = "Ready to Ship"
     SHIPPED = "Shipped"
     INVOICED = "Invoiced"
+    CLOSED = "Closed"
 
 class SalesOrder(TimestampMixin, Base):
     __tablename__ = "sales_orders"
@@ -23,7 +24,7 @@ class SalesOrder(TimestampMixin, Base):
     so_number = Column(String(50), unique=True, index=True)
     customer_id = Column(Integer)
     order_type = Column(Enum(SalesType))
-    status = Column(Enum(SalesStatus), default=SalesStatus.QUOTATION)
+    status = Column(Enum(SalesStatus), default=SalesStatus.OPEN)
     order_date = Column(DateTime, default=datetime.utcnow)
     total_amount = Column(Float, default=0.0)
     
@@ -36,21 +37,23 @@ class SalesOrderLine(TimestampMixin, Base):
     id = Column(Integer, primary_key=True, index=True)
     so_id = Column(Integer, ForeignKey("sales_orders.id"))
     
-    # For Apparel, items change per order so we do not link strictly to Inventory "Items"
-    # User requested separate JSON maps for varied specs instead of hard DB link.
-    item_description = Column(String(255))
-    size_specs = Column(JSON) # e.g. {"S": 100, "M": 200, "L": 150}
-    color = Column(String(50))
-    material_specs = Column(Text)
-    design_notes = Column(Text)
+    # Linked attributes (populated for scrap sales etc)
+    item_id = Column(Integer, ForeignKey("warehouse_items.id"), nullable=True)
+    location_id = Column(Integer, ForeignKey("inventory_locations.id"), nullable=True)
+    
+    # Manual entry requested by the user
+    item_name = Column(String(255))
+    item_description = Column(String(255), nullable=True)
+    uom = Column(String(50), default="pcs")
     
     unit_price = Column(Float, default=0.0)
     quantity = Column(Integer, default=0)
+    line_total = Column(Float, default=0.0)
 
 class Shipment(TimestampMixin, Base):
     __tablename__ = "shipments"
     id = Column(Integer, primary_key=True, index=True)
     so_id = Column(Integer, ForeignKey("sales_orders.id"))
     ship_date = Column(DateTime, default=datetime.utcnow)
-    from_location_id = Column(Integer, ForeignKey("locations.id")) # Should be a 'SHIPMENT' type location
+    from_location_id = Column(Integer, ForeignKey("inventory_locations.id")) # Fixed to correct warehouse location table
     is_shipped = Column(Boolean, default=False)

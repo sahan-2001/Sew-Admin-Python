@@ -11,8 +11,12 @@ from modules.settings.models import ItemCategory, ItemSubCategory, Site, SiteTyp
 from modules.settings.schemas import (
     CategoryCreate, CategoryResponse, SubCategoryCreate, SubCategoryResponse, 
     SiteCreate, SiteResponse, AssignUsersRequest,
-    UserCreate, UserUpdate
+    UserCreate, UserUpdate,
+    CompanyInfoResponse, CompanyInfoUpdate,
+    ApprovalSetupResponse, ApprovalSetupUpdate,
+    EmailTemplateResponse, EmailTemplateUpdate
 )
+from modules.settings.models import CompanyInfo, ApprovalSetup, EmailTemplate
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -273,3 +277,93 @@ def delete_sub_category(sub_id: int, db: Session = Depends(get_db)):
     db.delete(sub)
     db.commit()
     return {"status": "success"}
+
+# Company Information API
+@router.get("/company-info", response_model=CompanyInfoResponse)
+def get_company_info(db: Session = Depends(get_db)):
+    info = db.query(CompanyInfo).first()
+    if not info:
+        # Seed default data
+        info = CompanyInfo(
+            name="Sew-Admin Apparel Solutions",
+            address="123 Manufacturing St, Industrial City",
+            phone="+1 555 123 4567",
+            email="info@sewadmin.local",
+            website="www.sewadmin.local",
+            logo_url="https://ui-avatars.com/api/?name=SA&background=2563eb&color=fff"
+        )
+        db.add(info)
+        db.commit()
+        db.refresh(info)
+    return info
+
+@router.put("/company-info", response_model=CompanyInfoResponse)
+def update_company_info(data: CompanyInfoUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    info = db.query(CompanyInfo).first()
+    if not info:
+        info = CompanyInfo(**data.model_dump(exclude_unset=True))
+        db.add(info)
+    else:
+        for key, value in data.model_dump(exclude_unset=True).items():
+            setattr(info, key, value)
+    db.commit()
+    db.refresh(info)
+    return info
+
+# Approval Setup API
+@router.get("/approval-setup", response_model=List[ApprovalSetupResponse])
+def get_approval_setup(db: Session = Depends(get_db)):
+    setups = db.query(ApprovalSetup).all()
+    if not setups:
+        # Seed default
+        setup = ApprovalSetup(document_type="Sales Order", requires_approval=True)
+        db.add(setup)
+        db.commit()
+        db.refresh(setup)
+        return [setup]
+    return setups
+
+@router.put("/approval-setup/{setup_id}", response_model=ApprovalSetupResponse)
+def update_approval_setup(setup_id: int, data: ApprovalSetupUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    setup = db.query(ApprovalSetup).filter(ApprovalSetup.id == setup_id).first()
+    if not setup:
+        raise HTTPException(status_code=404, detail="Setup not found")
+    for key, value in data.model_dump(exclude_unset=True).items():
+        setattr(setup, key, value)
+    db.commit()
+    db.refresh(setup)
+    return setup
+
+# Email Templates API
+@router.get("/email-templates", response_model=List[EmailTemplateResponse])
+def get_email_templates(db: Session = Depends(get_db)):
+    templates = db.query(EmailTemplate).all()
+    if not templates:
+        # Seed default
+        template = EmailTemplate(
+            name="Sales Order Creation",
+            subject="Your Sales Order {{order_no}}",
+            body_template="Hello,\n\nYour sales order {{order_no}} has been created.\n\nThank you,\n{{company_name}}"
+        )
+        db.add(template)
+        db.commit()
+        db.refresh(template)
+        return [template]
+    return templates
+
+@router.put("/email-templates/{template_id}", response_model=EmailTemplateResponse)
+def update_email_template(template_id: int, data: EmailTemplateUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    template = db.query(EmailTemplate).filter(EmailTemplate.id == template_id).first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    for key, value in data.model_dump(exclude_unset=True).items():
+        setattr(template, key, value)
+    db.commit()
+    db.refresh(template)
+    return template

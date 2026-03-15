@@ -36,6 +36,7 @@ import modules.production.models
 import modules.inventory.models
 import modules.accounting.models
 import modules.users.models
+import modules.customers.models
 import modules.warehouse.models
 
 # Create database tables

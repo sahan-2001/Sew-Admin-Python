@@ -1,95 +1,1476 @@
 {% extends "base.html" %}
-{% block title %}Sales & CRM{% endblock %}
+{% block title %}Sales & CRM - Sew-Admin{% endblock %}
 {% block side_sales %}active{% endblock %}
 
 {% block content %}
 <header class="content-header">
     <div>
         <h1>Sales & CRM</h1>
-        <p class="subtitle">Manage Customers, Quotes, Sales Orders, and Invoicing.</p>
+        <p class="subtitle">Manage Customers, Sales Orders, Pricing, and Volume Discounts.</p>
     </div>
-    <button class="btn btn-primary glass-btn" onclick="openSalesModal()"><i class="fa-solid fa-plus"></i> Create Sales
-        Document</button>
 </header>
 
-<div class="data-panel glass">
-    <div class="panel-header">
-        <h3>Sales Records</h3>
-        <div class="filters">
-            <input type="text" placeholder="Search..." class="search-input">
+<style>
+/* Dynamics 365 Style Grid - Theme Matched */
+.d365-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: inherit; /* Use theme font */
+    font-size: 13px;
+    background: var(--bg-glass);
+    border: 1px solid var(--border-glass);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
+}
+.d365-table th {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    font-weight: 600;
+    text-align: left;
+    padding: 10px 12px;
+    border-right: 1px solid var(--border-glass);
+    border-bottom: 1px solid var(--border-glass);
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 11px;
+}
+.d365-table th:last-child {
+    border-right: none;
+}
+.d365-table td {
+    border-right: 1px solid var(--border-glass);
+    border-bottom: 1px solid var(--border-glass);
+    padding: 0; 
+    vertical-align: middle;
+    position: relative;
+    color: var(--text-main);
+}
+.d365-table td:last-child {
+    border-right: none;
+}
+.d365-table tbody tr:hover td {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+/* Seamless D365 inputs inside grid cells - Theme Matched */
+.table-input, .table-select {
+    border: 1px solid transparent;
+    background: transparent;
+    width: 100%;
+    height: 36px;
+    padding: 0 12px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text-main);
+    box-sizing: border-box;
+    border-radius: 0;
+    outline: none;
+    transition: background 0.2s, border 0.2s;
+}
+.table-select {
+    cursor: pointer;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+.table-input:hover, .table-select:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+.table-input:focus, .table-select:focus {
+    border: 1px solid var(--primary);
+    background: rgba(var(--primary-rgb), 0.05);
+    box-shadow: inset 0 0 0 1px var(--primary);
+    z-index: 10;
+    position: relative;
+}
+
+/* Option styling for selects */
+.table-select option {
+    background: var(--bg-dark);
+    color: var(--text-main);
+}
+
+/* A custom compact icon button for line removal */
+.icon-remove-d365 {
+    background: none;
+    border: none;
+    color: var(--danger);
+    cursor: pointer;
+    font-size: 14px;
+    width: 100%;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.6;
+    transition: opacity 0.2s, background 0.2s;
+}
+.icon-remove-d365:hover {
+    background: rgba(239, 68, 68, 0.1);
+    opacity: 1;
+}
+</style>
+
+<div class="tabs-container" style="margin-bottom: 2rem;">
+    <div class="tabs-header glass" style="display: flex; gap: 10px; padding: 10px; border-radius: 12px; margin-bottom: 1.5rem;">
+        <button class="tab-btn active" onclick="switchSalesTab(event, 'customers')">
+            <i class="fa-solid fa-users"></i> Customers
+        </button>
+        <button class="tab-btn" onclick="switchSalesTab(event, 'sales')">
+            <i class="fa-solid fa-file-invoice-dollar"></i> Sales Orders
+        </button>
+    </div>
+
+    <!-- Customers Tab -->
+    <div id="customers" class="tab-content active" style="display: block;">
+        <div class="data-panel glass">
+            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3>Customer Directory</h3>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <div class="search-wrapper">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="customerSearch" placeholder="Search customers..." onkeyup="filterCustomers()">
+                    </div>
+                    <button class="btn btn-primary glass-btn" onclick="openCustomerModal()">
+                        <i class="fa-solid fa-plus"></i> Add Customer
+                    </button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="modern-table" id="customersTable">
+                    <thead>
+                        <tr>
+                            <th>REF</th>
+                            <th>Customer Name</th>
+                            <th>Contact Info</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customersTableBody">
+                        <tr><td colspan="5" style="text-align: center; padding: 3rem;">
+                            <div class="loader"></div>
+                            <p style="margin-top: 1rem; color: var(--text-muted);">Syncing customer records...</p>
+                        </td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
-    <div class="table-responsive">
-        <table class="modern-table" id="salesTable">
-            <thead>
-                <tr>
-                    <th>Doc ID</th>
-                    <th>Type</th>
-                    <th>Customer</th>
-                    <th>Date</th>
-                    <th>Total Value</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Dummy data for UI -->
-                <tr>
-                    <td><strong>SO-10023</strong></td>
-                    <td>Sales Order</td>
-                    <td>Zara Inc.</td>
-                    <td>2026-03-08</td>
-                    <td>$12,450.00</td>
-                    <td><span class="badge in-progress">Pending Approval</span></td>
-                    <td class="action-cell">
-                        <button class="icon-btn edit-btn" title="Edit" onclick="editRow('SO-10023')"><i
-                                class="fa-solid fa-pen"></i></button>
-                        <button class="icon-btn success-btn" title="Send to Approval"><i
-                                class="fa-solid fa-check"></i></button>
-                        <button class="icon-btn danger-btn" title="Delete"><i class="fa-solid fa-trash"></i></button>
-                    </td>
-                </tr>
-                <tr>
-                    <td><strong>QT-00445</strong></td>
-                    <td>Quotation</td>
-                    <td>H&M Group</td>
-                    <td>2026-03-07</td>
-                    <td>$4,200.00</td>
-                    <td><span class="badge completed">Approved</span></td>
-                    <td class="action-cell">
-                        <button class="icon-btn edit-btn" title="Edit" onclick="editRow('QT-00445')"><i
-                                class="fa-solid fa-pen"></i></button>
-                        <button class="icon-btn primary-btn" title="Convert to Order"><i
-                                class="fa-solid fa-arrow-right-arrow-left"></i></button>
-                        <button class="icon-btn danger-btn" title="Delete"><i class="fa-solid fa-trash"></i></button>
-                    </td>
-                </tr>
-                <tr>
-                    <td><strong>SO-10022</strong></td>
-                    <td>Sales Order</td>
-                    <td>Local Boutique</td>
-                    <td>2026-03-05</td>
-                    <td>$1,150.00</td>
-                    <td><span class="badge cutting">Released to Production</span></td>
-                    <td class="action-cell">
-                        <button class="icon-btn edit-btn" title="Edit" onclick="editRow('SO-10022')"><i
-                                class="fa-solid fa-pen"></i></button>
-                        <button class="icon-btn success-btn" title="Generate Invoice"><i
-                                class="fa-solid fa-file-invoice"></i></button>
-                        <button class="icon-btn danger-btn" title="Delete"><i class="fa-solid fa-trash"></i></button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+
+    <!-- Sales Orders Tab -->
+    <div id="sales" class="tab-content" style="display: none;">
+        <div class="data-panel glass">
+            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3>Active Sales Orders</h3>
+                <button class="btn btn-primary glass-btn" onclick="openSalesOrderModal()">
+                    <i class="fa-solid fa-plus"></i> New Sales Order
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>SO Number</th>
+                            <th>Customer</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Total Amount</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sales_orders_tbody">
+                        <tr><td colspan="6" style="text-align: center; padding: 2rem; color:var(--text-muted);">Loading sales orders...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
 
+<!-- Print Window Overlay (Hidden from normal view) -->
+<div id="printArea" style="display:none; padding: 20px;"></div>
+
+<!-- Sales Order Modal -->
+<div id="salesOrderModal" class="modal">
+    <div class="modal-content glass" style="max-width: 1300px; width: 98%;">
+        <div class="modal-header">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div class="modal-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+                <div>
+                    <h2 style="margin:0;" id="soModalTitle">Create Sales Order</h2>
+                    <p class="subtitle" id="soModalStatus" style="margin:0;"></p>
+                </div>
+            </div>
+            <span class="close-modal" onclick="closeModal('salesOrderModal')"><i class="fa-solid fa-xmark"></i></span>
+        </div>
+        
+        <div class="modal-body" style="padding-top: 1.5rem;">
+            <input type="hidden" id="so_id" />
+            <input type="hidden" id="so_number_hidden" />
+            
+            <h3 style="margin-top:0; margin-bottom: 1rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem; color: var(--primary);">General Information</h3>
+            <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 2rem; background: rgba(255, 255, 255, 0.03); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-glass);">
+                <!-- Left Column -->
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <div style="display: flex; align-items: center;">
+                        <label style="width: 160px; text-align: right; margin-right: 15px; font-weight: 500;">Customer Name <span style="color:red;">*</span></label>
+                        <select id="so_customer" style="flex: 1; padding: 10px; background: var(--bg-dark); color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 8px;"></select>
+                    </div>
+                    <div style="display: flex; align-items: center;">
+                        <label style="width: 160px; text-align: right; margin-right: 15px; font-weight: 500;">Order Date</label>
+                        <input type="text" id="so_order_date" readonly style="flex: 1; padding: 10px; background: rgba(255, 255, 255, 0.05); color: var(--text-muted); cursor: not-allowed; border: 1px solid var(--border-glass); border-radius: 8px;">
+                    </div>
+                </div>
+                
+                <!-- Right Column -->
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <div style="display: flex; align-items: center;">
+                        <label style="width: 160px; text-align: right; margin-right: 15px; font-weight: 500;">Order Type</label>
+                        <select id="so_order_type" style="flex: 1; padding: 10px; background: var(--bg-dark); color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 8px;" onchange="handleOrderTypeChange()">
+                            <option value="Bulk Order">Bulk Order</option>
+                            <option value="Sample Order">Sample Order</option>
+                            <option value="Scrap Sale">Scrap Sale</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; align-items: center;">
+                        <label style="width: 160px; text-align: right; margin-right: 15px; font-weight: 500;">Status</label>
+                        <div id="so_status_text" style="flex: 1; padding: 8px 12px; background: rgba(0, 160, 0, 0.1); color: green; font-weight: bold; border-radius: 4px; border: 1px solid rgba(0, 160, 0, 0.2);">Open</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons for Flow -->
+            <div id="so_actions_panel" style="display: none; gap: 10px; flex-wrap: wrap; margin-bottom: 1.5rem; padding: 10px; background: rgba(var(--primary-rgb), 0.1); border-radius: 8px;">
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 style="margin:0;">Order Lines (Manual Entry)</h3>
+                <button class="btn btn-secondary btn-sm glass-btn" onclick="addSOLine()" id="btn_add_so_line">
+                    <i class="fa-solid fa-plus"></i> Add Line
+                </button>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="d365-table" style="overflow: visible;">
+                    <thead>
+                        <tr>
+                            <th>Item Name / Select</th>
+                            <th id="th_location" style="display:none; width: 140px;">Location</th>
+                            <th style="width: 80px;">Qty</th>
+                            <th style="width: 80px;">UoM</th>
+                            <th style="width: 100px;">Unit Price</th>
+                            <th style="width: 100px;">Line Total</th>
+                            <th style="width: 50px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="so_lines_tbody">
+                        <!-- Dynamic Lines -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div style="text-align: right; margin-top: 1.5rem;">
+                <strong style="font-size: 1.2rem; color: var(--text-color);">Grand Total: $ <span id="so_grand_total">0.00</span></strong>
+            </div>
+        </div>
+        
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1rem;">
+            <button class="btn btn-secondary glass-btn" onclick="closeModal('salesOrderModal')">Cancel</button>
+            <button class="btn btn-primary glass-btn" id="btn_save_so" onclick="saveSalesOrder()">
+                <i class="fa-solid fa-save"></i> Save Order
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Email Modal -->
+<div id="emailModal" class="modal">
+    <div class="modal-content glass" style="max-width: 600px;">
+        <div class="modal-header">
+            <h2>Send Document</h2>
+            <span class="close-modal" onclick="closeModal('emailModal')"><i class="fa-solid fa-xmark"></i></span>
+        </div>
+        <div class="modal-body">
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label>To (Email Address)</label>
+                <input type="text" id="email_to">
+            </div>
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label>Subject</label>
+                <input type="text" id="email_subject">
+            </div>
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label>Body</label>
+                <textarea id="email_body" rows="8"></textarea>
+            </div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1rem;">
+            <button class="btn btn-secondary glass-btn" onclick="closeModal('emailModal')">Cancel</button>
+            <button class="btn btn-primary glass-btn" onclick="sendEmail()">
+                <i class="fa-solid fa-paper-plane"></i> Send Email
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Customer Modal (Optimized) -->
+<div id="customerModal" class="modal">
+    <div class="modal-content glass" style="max-width: 650px;">
+        <div class="modal-header">
+            <h2 id="customerModalTitle">Create Customer</h2>
+            <span class="close-modal" onclick="closeModal('customerModal')"><i class="fa-solid fa-xmark"></i></span>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="edit_customer_id" />
+            <div class="form-grid">
+                <div class="form-group col-span-2">
+                    <label>Full Name / Company Name</label>
+                    <input type="text" id="cust_name" placeholder="ABC Apparel Inc.">
+                </div>
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="cust_email" placeholder="contact@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Phone Number</label>
+                    <input type="text" id="cust_phone" placeholder="+1 234 567 890">
+                </div>
+                <div class="form-group col-span-2">
+                    <label>Address / Billing Location</label>
+                    <textarea id="cust_address" rows="3" placeholder="Street, City, Country, Zip..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="cust_active">
+                        <option value="true">Active Account</option>
+                        <option value="false">Inactive / Blocked</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 2rem;">
+            <button class="btn btn-secondary glass-btn" onclick="closeModal('customerModal')">Cancel</button>
+            <button class="btn btn-primary glass-btn" onclick="saveCustomer()">
+                <i class="fa-solid fa-save"></i> Save Customer
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Pricing and Discounts Modal (Optimized & Searchable) -->
+<div id="pricingModal" class="modal">
+    <div class="modal-content glass" style="max-width: 1000px; width: 95%;">
+        <div class="modal-header">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div class="modal-icon"><i class="fa-solid fa-tags"></i></div>
+                <div>
+                    <h2 style="margin:0;">Item Pricing & Rules</h2>
+                    <p class="subtitle" id="pricingCustomerName" style="margin:0;"></p>
+                </div>
+            </div>
+            <span class="close-modal" onclick="closeModal('pricingModal')"><i class="fa-solid fa-xmark"></i></span>
+        </div>
+        
+        <div class="modal-body" style="padding-top: 1.5rem;">
+            <input type="hidden" id="pricing_customer_id" />
+            
+            <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 2rem;">
+                
+                <!-- Left Column: Pricing -->
+                <div class="pricing-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="margin:0;"><i class="fa-solid fa-dollar-sign"></i> Special Prices</h3>
+                    </div>
+                    <!-- Item Selection for Pricing -->
+                    <div class="form-section glass" style="padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                        <div class="form-group">
+                            <label>Select Item (Searchable)</label>
+                            <div class="search-select" id="price_item_selector">
+                                <div class="ss-trigger" onclick="toggleSS('price_item_selector')">
+                                    <span class="ss-value">Search and select item...</span>
+                                    <i class="fa-solid fa-chevron-down"></i>
+                                </div>
+                                <div class="ss-dropdown glass">
+                                    <div class="ss-search">
+                                        <i class="fa-solid fa-magnifying-glass"></i>
+                                        <input type="text" placeholder="SKU or Name..." onkeyup="filterSS('price_item_selector', this.value)">
+                                    </div>
+                                    <div class="ss-options" id="price_item_options">
+                                        <!-- Items injected here -->
+                                    </div>
+                                </div>
+                                <input type="hidden" id="price_item_id">
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                            <div class="form-group">
+                                <label>Min Order Qty</label>
+                                <input type="number" id="price_min_qty" value="1" min="1">
+                            </div>
+                            <div class="form-group">
+                                <label>Special Price ($)</label>
+                                <input type="number" id="price_value" step="0.01" placeholder="0.00">
+                            </div>
+                        </div>
+                        <button class="btn btn-primary btn-sm" style="width:100%; margin-top: 10px;" onclick="addCustomerPrice()">
+                            <i class="fa-solid fa-plus"></i> Apply Pricing Rule
+                        </button>
+                    </div>
+
+                    <div class="table-mini-wrapper">
+                        <table class="modern-table text-sm" id="pricesTable">
+                            <thead>
+                                <tr><th>Item</th><th>Min Qty</th><th>Price</th><th></th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Right Column: Discounts -->
+                <div class="pricing-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="margin:0;"><i class="fa-solid fa-percent"></i> Volume Discounts</h3>
+                    </div>
+
+                    <!-- Item Selection for Discounts -->
+                    <div class="form-section glass" style="padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                        <div class="form-group">
+                            <label>Select Item (Searchable)</label>
+                            <div class="search-select" id="disc_item_selector">
+                                <div class="ss-trigger" onclick="toggleSS('disc_item_selector')">
+                                    <span class="ss-value">Search and select item...</span>
+                                    <i class="fa-solid fa-chevron-down"></i>
+                                </div>
+                                <div class="ss-dropdown glass">
+                                    <div class="ss-search">
+                                        <i class="fa-solid fa-magnifying-glass"></i>
+                                        <input type="text" placeholder="SKU or Name..." onkeyup="filterSS('disc_item_selector', this.value)">
+                                    </div>
+                                    <div class="ss-options" id="disc_item_options">
+                                        <!-- Items injected here -->
+                                    </div>
+                                </div>
+                                <input type="hidden" id="disc_item_id">
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px;">
+                            <div class="form-group">
+                                <label>Min Qty</label>
+                                <input type="number" id="disc_min_qty" value="1" min="1">
+                            </div>
+                            <div class="form-group">
+                                <label>Type</label>
+                                <select id="disc_type">
+                                    <option value="Percentage">Percentage %</option>
+                                    <option value="Fixed">Fixed $</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Value</label>
+                                <input type="number" id="disc_value" step="0.01" placeholder="Val">
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                            <div class="form-group">
+                                <label>Min Disc (LB)</label>
+                                <input type="number" id="disc_min" placeholder="Optional">
+                            </div>
+                            <div class="form-group">
+                                <label>Max Disc (UB)</label>
+                                <input type="number" id="disc_max" placeholder="Optional">
+                            </div>
+                        </div>
+                        <button class="btn btn-success btn-sm" style="width:100%; margin-top: 10px;" onclick="addCustomerDiscount()">
+                            <i class="fa-solid fa-plus"></i> Apply Discount Rule
+                        </button>
+                    </div>
+
+                    <div class="table-mini-wrapper">
+                        <table class="modern-table text-sm" id="discountsTable">
+                            <thead>
+                                <tr><th>Item</th><th>Min Qty</th><th>Value</th><th></th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Premium Look & Feel Enhancement */
+    :root {
+        --primary-rgb: 37, 99, 235;
+        --success-rgb: 16, 185, 129;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.25rem;
+    }
+    .col-span-2 { grid-column: span 2; }
+
+    .form-group label {
+        display: block;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: var(--text-muted);
+    }
+
+    .form-group input, .form-group textarea, .form-group select {
+        width: 100%;
+        padding: 0.75rem;
+        border-radius: 8px;
+        background: var(--bg-body);
+        border: 1px solid var(--border-glass);
+        color: var(--text-main);
+        transition: all 0.2s;
+    }
+
+    .form-group input:focus, .form-group textarea:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+        outline: none;
+    }
+
+    /* Searchable Select (SS) CSS */
+    .search-select {
+        position: relative;
+        width: 100%;
+    }
+    .ss-trigger {
+        padding: 0.75rem;
+        background: var(--bg-body);
+        border: 1px solid var(--border-glass);
+        border-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        color: var(--text-main);
+    }
+    .ss-dropdown {
+        position: absolute;
+        top: 105%;
+        left: 0;
+        right: 0;
+        z-index: 2000;
+        display: none;
+        max-height: 300px;
+        overflow: hidden;
+        flex-direction: column;
+        border-radius: 8px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    .ss-dropdown.active { display: flex; }
+    .ss-search {
+        padding: 10px;
+        border-bottom: 1px solid var(--border-glass);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .ss-search input {
+        background: transparent;
+        border: none;
+        padding: 5px;
+        color: var(--text-main);
+        width: 100%;
+        outline: none;
+    }
+    .ss-options {
+        overflow-y: auto;
+        max-height: 250px;
+    }
+    .ss-option {
+        padding: 10px 15px;
+        cursor: pointer;
+        transition: background 0.2s;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .ss-option:hover {
+        background: rgba(var(--primary-rgb), 0.15);
+    }
+    .ss-option .opt-sku {
+        font-weight: 700;
+        color: var(--primary);
+        font-size: 0.85rem;
+    }
+    .ss-option .opt-name {
+        display: block;
+        font-size: 0.85rem;
+    }
+    .ss-option .opt-meta {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+    }
+
+    /* Tabs & Panels */
+    .tab-btn {
+        padding: 10px 20px;
+        border: none;
+        background: transparent;
+        color: var(--text-muted);
+        font-weight: 600;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .tab-btn.active {
+        background: var(--primary);
+        color: white;
+    }
+    
+    .search-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+    .search-wrapper i {
+        position: absolute;
+        left: 12px;
+        color: var(--text-muted);
+    }
+    .search-wrapper input {
+        padding: 0.6rem 1rem 0.6rem 2.5rem;
+        border-radius: 20px;
+        border: 1px solid var(--border-glass);
+        background: rgba(255,255,255,0.05);
+        color: var(--text-main);
+        width: 250px;
+    }
+
+    /* Modal Styling */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 2000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(8px);
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+    .modal-content {
+        background: var(--bg-card);
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        border: 1px solid var(--border-glass);
+        position: relative;
+        animation: modalSlide 0.3s ease-out;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    @keyframes modalSlide {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    .close-modal {
+        cursor: pointer;
+        font-size: 1.25rem;
+        color: var(--text-muted);
+        transition: color 0.2s;
+    }
+    .close-modal:hover { color: var(--danger); }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--border-glass);
+    }
+    .modal-icon {
+        width: 45px;
+        height: 45px;
+        border-radius: 10px;
+        background: rgba(var(--primary-rgb), 0.2);
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+    
+    .pricing-card {
+        background: rgba(255,255,255,0.02);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid var(--border-glass);
+    }
+    .table-mini-wrapper {
+        max-height: 250px;
+        overflow-y: auto;
+    }
+
+    /* Loader */
+    .loader {
+        border: 3px solid rgba(255, 255, 255, 0.1);
+        border-top: 3px solid var(--primary);
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+        margin: auto;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+</style>
+
 <script>
-    function openSalesModal() {
-        alert("Opening Create Sales Modal...");
+    let customersList = [];
+    let itemsList = [];
+
+    // TABS LOGIC
+    function switchSalesTab(event, tabId) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
+        document.getElementById(tabId).style.display = 'block';
     }
-    function editRow(id) {
-        alert("Editing Record: " + id);
+
+    // SEARCHABLE SELECT (SS) LOGIC
+    function toggleSS(id) {
+        const dd = document.querySelector(`#${id} .ss-dropdown`);
+        const isActive = dd.classList.contains('active');
+        // Close all others
+        document.querySelectorAll('.ss-dropdown').forEach(d => d.classList.remove('active'));
+        if (!isActive) dd.classList.add('active');
     }
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.search-select')) {
+            document.querySelectorAll('.ss-dropdown').forEach(d => d.classList.remove('active'));
+        }
+    });
+
+    function filterSS(id, query) {
+        const options = document.querySelectorAll(`#${id} .ss-option`);
+        const q = query.toLowerCase();
+        options.forEach(opt => {
+            const text = opt.innerText.toLowerCase();
+            opt.style.display = text.includes(q) ? 'block' : 'none';
+        });
+    }
+
+    function selectSS(id, itemId, sku, name) {
+        const container = document.getElementById(id);
+        container.querySelector('.ss-value').innerHTML = `<span class="opt-sku">${sku}</span> - ${name}`;
+        container.querySelector('input[type="hidden"]').value = itemId;
+        container.querySelector('.ss-dropdown').classList.remove('active');
+        container.classList.add('selected');
+    }
+
+    function resetSS(id) {
+        const container = document.getElementById(id);
+        container.querySelector('.ss-value').innerText = "Search and select item...";
+        container.querySelector('input[type="hidden"]').value = "";
+        container.classList.remove('selected');
+    }
+
+    function populateSSOptions() {
+        const render = (containerId) => {
+            const el = document.getElementById(containerId);
+            el.innerHTML = '';
+            itemsList.forEach(item => {
+                const opt = document.createElement('div');
+                opt.className = 'ss-option';
+                opt.innerHTML = `
+                    <span class="opt-sku">${item.sku}</span>
+                    <span class="opt-name">${item.name}</span>
+                    <div class="opt-meta">${item.category || 'No Category'} | ${item.item_type}</div>
+                `;
+                opt.onclick = () => selectSS(containerId.replace('_options', '_selector'), item.id, item.sku, item.name);
+                el.appendChild(opt);
+            });
+        };
+        render('price_item_options');
+        render('disc_item_options');
+    }
+
+    // MODAL HELPERS
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    // DATA LOADING
+    async function loadCustomers() {
+        try {
+            const res = await apiFetch('/api/customers/all');
+            if (res.ok) {
+                customersList = await res.json();
+                renderCustomers(customersList);
+            }
+        } catch(e) { console.error('Load Error:', e); }
+    }
+
+    async function loadItems() {
+        try {
+            const res = await apiFetch('/api/items/list');
+            if(res.ok) {
+                itemsList = await res.json();
+                populateSSOptions();
+            }
+        } catch(e) { console.error('Items Load Error:', e); }
+    }
+
+    function renderCustomers(list) {
+        const tbody = document.getElementById('customersTableBody');
+        tbody.innerHTML = '';
+        if(list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;">No customers found matching criteria.</td></tr>';
+            return;
+        }
+        list.forEach(c => {
+            const status = c.is_active ? '<span class="badge in-progress">Active</span>' : '<span class="badge completed">Inactive</span>';
+            tbody.innerHTML += `
+                <tr>
+                    <td><span style="font-family:monospace; color:var(--primary);">CUS-${String(c.id).padStart(4, '0')}</span></td>
+                    <td><strong>${c.name}</strong><br><small style="color:var(--text-muted);">${c.address || ''}</small></td>
+                    <td><div style="font-size:0.9rem;">${c.email || ''}</div><div style="font-size:0.8rem; color:var(--text-muted);">${c.phone || ''}</div></td>
+                    <td>${status}</td>
+                    <td class="action-cell">
+                        <button class="icon-btn success-btn" title="Pricing & Discounts" onclick="openPricingModal(${c.id})"><i class="fa-solid fa-tags"></i></button>
+                        <button class="icon-btn edit-btn" title="Edit Profile" onclick="openCustomerModal(${c.id})"><i class="fa-solid fa-user-pen"></i></button>
+                        <button class="icon-btn danger-btn" title="Delete" onclick="deleteCustomer(${c.id})"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+
+    function filterCustomers() {
+        const q = document.getElementById('customerSearch').value.toLowerCase();
+        const filtered = customersList.filter(c => 
+            c.name.toLowerCase().includes(q) || 
+            (c.email && c.email.toLowerCase().includes(q)) ||
+            (c.phone && c.phone.includes(q))
+        );
+        renderCustomers(filtered);
+    }
+
+    // CUSTOMER FORM
+    function openCustomerModal(id = null) {
+        document.getElementById('edit_customer_id').value = '';
+        document.getElementById('cust_name').value = '';
+        document.getElementById('cust_email').value = '';
+        document.getElementById('cust_phone').value = '';
+        document.getElementById('cust_address').value = '';
+        document.getElementById('cust_active').value = 'true';
+        document.getElementById('customerModalTitle').innerText = 'Create New Customer';
+
+        if(id) {
+            const c = customersList.find(x => x.id === id);
+            if(c) {
+                document.getElementById('edit_customer_id').value = c.id;
+                document.getElementById('cust_name').value = c.name;
+                document.getElementById('cust_email').value = c.email || '';
+                document.getElementById('cust_phone').value = c.phone || '';
+                document.getElementById('cust_address').value = c.address || '';
+                document.getElementById('cust_active').value = c.is_active.toString();
+                document.getElementById('customerModalTitle').innerText = 'Update Customer Profile';
+            }
+        }
+        openModal('customerModal');
+    }
+
+    async function saveCustomer() {
+        const id = document.getElementById('edit_customer_id').value;
+        const body = {
+            name: document.getElementById('cust_name').value,
+            email: document.getElementById('cust_email').value,
+            phone: document.getElementById('cust_phone').value,
+            address: document.getElementById('cust_address').value,
+            is_active: document.getElementById('cust_active').value === 'true'
+        };
+
+        if(!body.name) return alert("Customer name is required.");
+
+        const url = id ? `/api/customers/${id}` : '/api/customers/';
+        const method = id ? 'PUT' : 'POST';
+
+        try {
+            const res = await apiFetch(url, {
+                method, headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body)
+            });
+            if(res.ok) {
+                closeModal('customerModal');
+                loadCustomers();
+            } else {
+                const err = await res.json();
+                alert("Error: " + err.detail);
+            }
+        } catch(e) { alert("Network Error"); }
+    }
+
+    async function deleteCustomer(id) {
+        if(!confirm("Are you sure? This will permanently delete the customer and all custom pricing rules.")) return;
+        try {
+            const res = await apiFetch(`/api/customers/${id}`, { method: 'DELETE' });
+            if(res.ok) loadCustomers();
+            else alert("Error: " + (await res.json()).detail);
+        } catch(e) { alert("Network Error"); }
+    }
+
+    // PRICING LOGIC
+    let currentPricingCustomer = null;
+
+    function openPricingModal(id) {
+        currentPricingCustomer = customersList.find(x => x.id === id);
+        if(!currentPricingCustomer) return;
+
+        document.getElementById('pricing_customer_id').value = id;
+        document.getElementById('pricingCustomerName').innerText = "Records for: " + currentPricingCustomer.name;
+        
+        resetSS('price_item_selector');
+        resetSS('disc_item_selector');
+        document.getElementById('price_value').value = '';
+        document.getElementById('disc_value').value = '';
+        
+        renderPricingTables();
+        openModal('pricingModal');
+    }
+
+    function getItemSku(id) {
+        const item = itemsList.find(x => x.id === id);
+        return item ? `<span style="color:var(--primary); font-family:monospace; font-weight:bold;">${item.sku}</span>` : 'Unknown';
+    }
+
+    function renderPricingTables() {
+        const pt = document.querySelector('#pricesTable tbody');
+        pt.innerHTML = '';
+        if(currentPricingCustomer.prices && currentPricingCustomer.prices.length > 0) {
+            currentPricingCustomer.prices.forEach(p => {
+                pt.innerHTML += `<tr>
+                    <td>${getItemSku(p.item_id)}</td>
+                    <td>${p.min_qty}</td>
+                    <td><strong>$${p.price.toFixed(2)}</strong></td>
+                    <td style="text-align:right;"><button class="icon-btn danger-btn" onclick="deletePrice(${p.id})"><i class="fa-solid fa-trash"></i></button></td>
+                </tr>`;
+            });
+        } else {
+            pt.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:1rem;">No special prices set.</td></tr>';
+        }
+
+        const dt = document.querySelector('#discountsTable tbody');
+        dt.innerHTML = '';
+        if(currentPricingCustomer.discounts && currentPricingCustomer.discounts.length > 0) {
+            currentPricingCustomer.discounts.forEach(d => {
+                const val = d.discount_type === 'Percentage' ? `${d.discount_value}%` : `$${d.discount_value.toFixed(2)}`;
+                dt.innerHTML += `<tr>
+                    <td>${getItemSku(d.item_id)}</td>
+                    <td>${d.min_qty}</td>
+                    <td><span class="badge material">${val}</span></td>
+                    <td style="text-align:right;"><button class="icon-btn danger-btn" onclick="deleteDiscount(${d.id})"><i class="fa-solid fa-trash"></i></button></td>
+                </tr>`;
+            });
+        } else {
+            dt.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:1rem;">No discounts set.</td></tr>';
+        }
+    }
+
+    async function addCustomerPrice() {
+        const item_id = document.getElementById('price_item_id').value;
+        const body = {
+            item_id: parseInt(item_id),
+            min_qty: parseFloat(document.getElementById('price_min_qty').value || 1),
+            price: parseFloat(document.getElementById('price_value').value)
+        };
+        if(!item_id || isNaN(body.price)) return alert("Please select an item and specify a price.");
+
+        try {
+            const res = await apiFetch(`/api/customers/${currentPricingCustomer.id}/prices`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
+            });
+            if(res.ok) {
+                document.getElementById('price_value').value = '';
+                resetSS('price_item_selector');
+                await syncLocalCustomer();
+                renderPricingTables();
+            } else {
+                alert("Error: " + (await res.json()).detail);
+            }
+        } catch(e) { alert("Network Error"); }
+    }
+
+    async function deletePrice(priceId) {
+        try {
+            const res = await apiFetch(`/api/customers/${currentPricingCustomer.id}/prices/${priceId}`, { method: 'DELETE' });
+            if(res.ok) {
+                await syncLocalCustomer();
+                renderPricingTables();
+            }
+        } catch(e) { alert("Network Error"); }
+    }
+
+    async function addCustomerDiscount() {
+        const item_id = document.getElementById('disc_item_id').value;
+        const min_limit = document.getElementById('disc_min').value;
+        const max_limit = document.getElementById('disc_max').value;
+
+        const body = {
+            item_id: parseInt(item_id),
+            min_qty: parseFloat(document.getElementById('disc_min_qty').value || 1),
+            discount_type: document.getElementById('disc_type').value,
+            discount_value: parseFloat(document.getElementById('disc_value').value),
+            min_discount: min_limit ? parseFloat(min_limit) : null,
+            max_discount: max_limit ? parseFloat(max_limit) : null
+        };
+        if(!item_id || isNaN(body.discount_value)) return alert("Please select an item and specify a discount value.");
+
+        try {
+            const res = await apiFetch(`/api/customers/${currentPricingCustomer.id}/discounts`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
+            });
+            if(res.ok) {
+                document.getElementById('disc_value').value = '';
+                document.getElementById('disc_min').value = '';
+                document.getElementById('disc_max').value = '';
+                resetSS('disc_item_selector');
+                await syncLocalCustomer();
+                renderPricingTables();
+            } else {
+                alert("Error: " + (await res.json()).detail);
+            }
+        } catch(e) { alert("Network Error"); }
+    }
+
+    async function deleteDiscount(discountId) {
+        try {
+            const res = await apiFetch(`/api/customers/${currentPricingCustomer.id}/discounts/${discountId}`, { method: 'DELETE' });
+            if(res.ok) {
+                await syncLocalCustomer();
+                renderPricingTables();
+            }
+        } catch(e) { alert("Network Error"); }
+    }
+
+    async function syncLocalCustomer() {
+        const id = currentPricingCustomer.id;
+        await loadCustomers();
+        currentPricingCustomer = customersList.find(x => x.id === id);
+    }
+
+    // --- SALES ORDER LOGIC ---
+    let salesOrders = [];
+    let globalItems = [];
+    let globalLocations = [];
+    
+    async function loadGlobalWarehouseData() {
+        try {
+            const resI = await apiFetch('/api/items/list');
+            if(resI.ok) globalItems = await resI.json();
+            
+            const resL = await apiFetch('/api/warehouse/locations');
+            if(resL.ok) globalLocations = await resL.json();
+        } catch(e) { console.error('Error loading warehouse items/locations', e); }
+    }
+
+    async function loadSalesOrders() {
+        try {
+            const res = await apiFetch('/api/sales/orders');
+            if (res.ok) {
+                salesOrders = await res.json();
+                const tbody = document.getElementById('sales_orders_tbody');
+                tbody.innerHTML = '';
+                if(salesOrders.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color:var(--text-muted);">No orders found.</td></tr>';
+                    return;
+                }
+                salesOrders.forEach(so => {
+                    const cust = customersList.find(c => c.id === so.customer_id) || {name: 'Unknown'};
+                    const statusColors = {
+                        "Open": "var(--primary)",
+                        "Pending Approval": "orange",
+                        "Released": "green",
+                        "In Production": "teal",
+                        "Shipped": "purple",
+                        "Closed": "grey"
+                    };
+                    const color = statusColors[so.status] || 'var(--text-color)';
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><strong>${so.so_number}</strong></td>
+                            <td>${cust.name}</td>
+                            <td>${new Date(so.order_date).toLocaleDateString()}</td>
+                            <td><span class="badge" style="background: ${color}; color:white; padding: 4px 8px; border-radius: 4px;">${so.status}</span></td>
+                            <td>$${so.total_amount.toFixed(2)}</td>
+                            <td>
+                                <button class="btn btn-secondary btn-sm glass-btn" onclick="viewSalesOrder(${so.id})">View</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+        } catch (e) { console.error('Error loading SOs', e); }
+    }
+
+    function handleOrderTypeChange() {
+        // Switch table layout based on Scrap Sale vs others
+        const type = document.getElementById('so_order_type').value;
+        const thLoc = document.getElementById('th_location');
+        if(type === 'Scrap Sale') {
+            thLoc.style.display = 'table-cell';
+        } else {
+            thLoc.style.display = 'none';
+        }
+        
+        // Reset lines
+        document.getElementById('so_lines_tbody').innerHTML = '';
+        addSOLine();
+        calcSOTotal();
+    }
+
+    function openSalesOrderModal() {
+        document.getElementById('so_id').value = '';
+        document.getElementById('soModalTitle').innerText = 'Sales Order';
+        document.getElementById('soModalStatus').innerText = 'New Order';
+        document.getElementById('so_actions_panel').style.display = 'none';
+        document.getElementById('btn_add_so_line').style.display = 'inline-block';
+        document.getElementById('btn_save_so').style.display = 'inline-block';
+        
+        document.getElementById('so_order_date').value = new Date().toLocaleDateString();
+        document.getElementById('so_order_type').value = 'Bulk Order';
+        document.getElementById('so_order_type').disabled = false;
+        
+        const stText = document.getElementById('so_status_text');
+        stText.innerText = 'Open';
+        stText.style.background = 'rgba(16, 185, 129, 0.1)';
+        stText.style.color = 'var(--success)';
+        stText.style.borderColor = 'rgba(16, 185, 129, 0.2)';
+        
+        const sel = document.getElementById('so_customer');
+        sel.innerHTML = '<option value="">Select a Customer...</option>' + customersList.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        sel.disabled = false;
+        
+        handleOrderTypeChange();
+        openModal('salesOrderModal');
+    }
+
+    let lineIndex = 0;
+    function addSOLine(item_name='', uom='pcs', qty=1, price=0, total=0, locked=false, location_id=null, item_id=null) {
+        lineIndex++;
+        const tr = document.createElement('tr');
+        tr.id = `so_line_${lineIndex}`;
+        const readonly = locked ? 'readonly' : '';
+        const disabled = locked ? 'disabled' : '';
+        
+        const oType = document.getElementById('so_order_type').value;
+        const isScrap = oType === 'Scrap Sale';
+        
+        let itemField = '';
+        let locField = '';
+        
+        if (isScrap) {
+            itemField = `<select class="table-select so-l-item-id" onchange="autoFillItemDetails(this)" ${disabled}>
+                <option value="">Select Item...</option>
+                ${globalItems.map(i => `<option value="${i.id}" data-uom="${i.base_uom}" ${i.id === item_id ? 'selected' : ''}>${i.name} [${i.sku}]</option>`).join('')}
+            </select><input type="hidden" class="so-l-name" value="${item_name}">`;
+            
+            locField = `<td style="display:table-cell"><select class="table-select so-l-loc" ${disabled}>
+                <option value="">Select Loc...</option>
+                ${globalLocations.map(l => `<option value="${l.id}" ${l.id === location_id ? 'selected' : ''}>${l.name}</option>`).join('')}
+            </select></td>`;
+        } else {
+            itemField = `<input type="text" class="table-input so-l-name" value="${item_name}" placeholder="Item description..." ${readonly} onkeydown="handleSOLineKey(event, ${lineIndex}, 'name')" oninput="autoAddLine(this, ${lineIndex})">
+                         <input type="hidden" class="so-l-item-id" value="">`;
+            locField = `<td style="display:none"><input type="hidden" class="so-l-loc" value=""></td>`;
+        }
+        
+        tr.innerHTML = `
+            <td>${itemField}</td>
+            ${locField}
+            <td><input type="number" class="table-input so-l-qty" value="${qty}" min="1" oninput="calcSOTotal()" onkeydown="handleSOLineKey(event, ${lineIndex}, 'qty')" ${readonly}></td>
+            <td><input type="text" class="table-input so-l-uom" value="${uom}" onkeydown="handleSOLineKey(event, ${lineIndex}, 'uom')" ${readonly}></td>
+            <td><input type="number" class="table-input so-l-price" value="${price}" step="0.01" oninput="calcSOTotal()" onkeydown="handleSOLineKey(event, ${lineIndex}, 'price')" ${readonly}></td>
+            <td><input type="text" class="table-input so-l-total" value="${total.toFixed(2)}" readonly style="color: var(--text-muted); font-weight:600;"></td>
+            <td style="text-align:center; vertical-align:middle; width:32px;">
+                ${locked ? '' : `<button class="icon-remove-d365" tabindex="-1" onclick="document.getElementById('so_line_${lineIndex}').remove(); calcSOTotal();" title="Remove line"><i class="fa-solid fa-xmark"></i></button>`}
+            </td>
+        `;
+        document.getElementById('so_lines_tbody').appendChild(tr);
+    }
+    
+    function autoFillItemDetails(sel) {
+        const tr = sel.closest('tr');
+        const opt = sel.options[sel.selectedIndex];
+        if(opt && opt.value) {
+            tr.querySelector('.so-l-name').value = opt.text;
+            tr.querySelector('.so-l-uom').value = opt.getAttribute('data-uom') || 'pcs';
+        } else {
+            tr.querySelector('.so-l-name').value = '';
+        }
+        // Auto add a new empty line if this is the last row
+        autoAddLine(sel, parseInt(tr.id.replace('so_line_', '')));
+    }
+    
+    function autoAddLine(elem, rowIndex) {
+        if (!elem.value || elem.value.trim() === '') return;
+        const trs = document.querySelectorAll('#so_lines_tbody tr');
+        const lastTr = trs[trs.length - 1];
+        if (lastTr && lastTr.id === `so_line_${rowIndex}`) {
+            addSOLine();
+        }
+    }
+    
+    function handleSOLineKey(e, rowIndex, field) {
+        if (e.key === 'Tab' || e.key === 'Enter') {
+            const trs = document.querySelectorAll('#so_lines_tbody tr');
+            const lastTr = trs[trs.length - 1];
+            if (lastTr && lastTr.id === `so_line_${rowIndex}` && field === 'price') {
+                e.preventDefault();
+                addSOLine();
+                const newTrs = document.querySelectorAll('#so_lines_tbody tr');
+                const newTr = newTrs[newTrs.length - 1];
+                if (newTr) {
+                    newTr.querySelector('.so-l-name').focus();
+                }
+            }
+        }
+    }
+
+    function calcSOTotal() {
+        let grand = 0;
+        document.querySelectorAll('#so_lines_tbody tr').forEach(tr => {
+            const qty = parseFloat(tr.querySelector('.so-l-qty').value) || 0;
+            const price = parseFloat(tr.querySelector('.so-l-price').value) || 0;
+            const total = qty * price;
+            tr.querySelector('.so-l-total').value = total.toFixed(2);
+            grand += total;
+        });
+        document.getElementById('so_grand_total').innerText = grand.toFixed(2);
+    }
+
+    async function saveSalesOrder() {
+        const id = document.getElementById('so_id').value;
+        const lines = [];
+        document.querySelectorAll('#so_lines_tbody tr').forEach(tr => {
+            const locVal = tr.querySelector('.so-l-loc').value;
+            const itemVal = tr.querySelector('.so-l-item-id').value;
+            
+            lines.push({
+                item_name: tr.querySelector('.so-l-name').value,
+                item_id: itemVal ? parseInt(itemVal) : null,
+                location_id: locVal ? parseInt(locVal) : null,
+                uom: tr.querySelector('.so-l-uom').value,
+                quantity: parseFloat(tr.querySelector('.so-l-qty').value) || 1,
+                unit_price: parseFloat(tr.querySelector('.so-l-price').value) || 0,
+                line_total: parseFloat(tr.querySelector('.so-l-total').value) || 0
+            });
+        });
+        
+        if(lines.length === 0 || !lines[0].item_name) return alert('Add at least one item name.');
+        
+        if(!document.getElementById('so_customer').value) return alert('Please select a customer.');
+        
+        const body = {
+            customer_id: parseInt(document.getElementById('so_customer').value),
+            order_type: document.getElementById('so_order_type').value,
+            total_amount: parseFloat(document.getElementById('so_grand_total').innerText),
+            lines: lines
+        };
+        
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `/api/sales/orders/${id}` : '/api/sales/orders';
+        
+        try {
+            const res = await apiFetch(url, {
+                method: method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body)
+            });
+            if(res.ok) {
+                closeModal('salesOrderModal');
+                loadSalesOrders();
+            } else alert('Error: ' + (await res.json()).detail);
+        } catch(e) { alert("Network Error"); }
+    }
+
+    function viewSalesOrder(id) {
+        const so = salesOrders.find(x => x.id === id);
+        if(!so) return;
+        
+        const isLocked = so.status !== 'Open';
+        
+        document.getElementById('so_id').value = so.id;
+        document.getElementById('soModalTitle').innerText = 'Sales Order: ' + so.so_number;
+        document.getElementById('soModalStatus').innerText = '';
+        
+        document.getElementById('so_order_date').value = new Date(so.order_date).toLocaleDateString();
+        document.getElementById('so_order_type').value = so.order_type || 'Bulk Order';
+        document.getElementById('so_order_type').disabled = isLocked;
+        
+        const stText = document.getElementById('so_status_text');
+        stText.innerText = so.status;
+        if(so.status === 'Open') {
+            stText.style.background = 'rgba(0, 160, 0, 0.1)';
+            stText.style.color = 'green';
+            stText.style.borderColor = 'rgba(0, 160, 0, 0.2)';
+        } else if (so.status === 'Pending Approval') {
+            stText.style.background = 'rgba(255, 165, 0, 0.1)';
+            stText.style.color = 'darkorange';
+            stText.style.borderColor = 'rgba(255, 165, 0, 0.2)';
+        } else {
+            stText.style.background = 'rgba(0, 0, 255, 0.1)';
+            stText.style.color = 'blue';
+            stText.style.borderColor = 'rgba(0, 0, 255, 0.2)';
+        }
+        
+        const type = so.order_type || 'Bulk Order';
+        document.getElementById('so_order_type').value = type;
+        document.getElementById('so_order_type').disabled = isLocked;
+        
+        handleOrderTypeChange();
+        
+        const sel = document.getElementById('so_customer');
+        sel.innerHTML = customersList.map(c => `<option value="${c.id}" ${c.id === so.customer_id ? 'selected' : ''}>${c.name}</option>`).join('');
+        sel.disabled = isLocked;
+        
+        document.getElementById('so_lines_tbody').innerHTML = '';
+        so.lines.forEach(l => {
+            addSOLine(l.item_name, l.uom, l.quantity, l.unit_price, l.line_total, isLocked, l.location_id, l.item_id);
+        });
+        document.getElementById('so_grand_total').innerText = so.total_amount.toFixed(2);
+        
+        document.getElementById('btn_add_so_line').style.display = isLocked ? 'none' : 'inline-block';
+        document.getElementById('btn_save_so').style.display = isLocked ? 'none' : 'inline-block';
+        
+        const actionsPane = document.getElementById('so_actions_panel');
+        actionsPane.style.display = 'flex';
+        actionsPane.innerHTML = '';
+        
+        if (so.status === 'Open') {
+            actionsPane.innerHTML = `<button class="btn btn-primary btn-sm glass-btn" onclick="updateSOStatus(${so.id}, 'Pending Approval')"><i class="fa-solid fa-paper-plane"></i> Send for Approval</button>`;
+        } else if (so.status === 'Pending Approval') {
+            actionsPane.innerHTML = `<button class="btn btn-primary btn-sm glass-btn" style="background:var(--secondary);" onclick="updateSOStatus(${so.id}, 'Released')"><i class="fa-solid fa-check"></i> Approve Order</button>`;
+        } else if (so.status === 'Released') {
+            actionsPane.innerHTML = `
+                <button class="btn btn-secondary btn-sm glass-btn" onclick="printSO(${so.id})"><i class="fa-solid fa-print"></i> Print PDF</button>
+                <button class="btn btn-secondary btn-sm glass-btn" onclick="openEmailSO(${so.id})"><i class="fa-solid fa-envelope"></i> Send Email</button>
+                <button class="btn btn-primary btn-sm glass-btn"><i class="fa-solid fa-industry"></i> Create Production Order</button>
+            `;
+        } else {
+            actionsPane.style.display = 'none';
+        }
+        
+        openModal('salesOrderModal');
+    }
+
+    async function updateSOStatus(id, newStatus) {
+        try {
+            const res = await apiFetch(`/api/sales/orders/${id}/status`, {
+                method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({status: newStatus})
+            });
+            if(res.ok) {
+                await loadSalesOrders();
+                viewSalesOrder(id);
+            }
+        } catch(e) {}
+    }
+
+    async function printSO(id) {
+        const so = salesOrders.find(x => x.id === id);
+        const cust = customersList.find(c => c.id === so.customer_id) || {};
+        let cinfo = {name: 'Company', address: '', phone: '', email: '', logo_url: ''};
+        try {
+            const r = await apiFetch('/api/settings/company-info');
+            if(r.ok) cinfo = await r.json();
+        } catch(e) {}
+        
+        const prt = window.open('', '', 'height=800,width=800');
+        let linesHtml = so.lines.map(l => `<tr><td>${l.item_name}</td><td>${l.quantity}</td><td>${l.uom}</td><td>$${l.unit_price.toFixed(2)}</td><td>$${l.line_total.toFixed(2)}</td></tr>`).join('');
+        
+        const logoHtml = cinfo.logo_url && cinfo.logo_url.trim() !== '' ? `<img src="${cinfo.logo_url}" style="max-width:150px">` : `<h2>${cinfo.name}</h2>`;
+        
+        prt.document.write(`
+            <html><head><title>Print SO</title>
+            <style>
+                body { font-family: sans-serif; padding: 20px; }
+                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                .header { display: flex; justify-content: space-between; margin-bottom: 40px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+            </style>
+            </head><body>
+            <div class="header">
+                <div>
+                    ${logoHtml}
+                    <p>${cinfo.address}<br>Phone: ${cinfo.phone} | Email: ${cinfo.email}</p>
+                </div>
+                <div style="text-align: right;">
+                    <h2>SALES ORDER</h2>
+                    <p><b>Order No:</b> ${so.so_number}<br><b>Date:</b> ${new Date(so.order_date).toLocaleDateString()}</p>
+                </div>
+            </div>
+            <div>
+                <p><b>Bill To:</b><br>${cust.name}<br>${cust.address || ''}<br>${cust.phone || ''}</p>
+            </div>
+            <table>
+                <tr><th>Item</th><th>Qty</th><th>UOM</th><th>Price</th><th>Total</th></tr>
+                ${linesHtml}
+                <tr><td colspan="4" style="text-align:right"><b>Grand Total:</b></td><td><b>$${so.total_amount.toFixed(2)}</b></td></tr>
+            </table>
+            </body></html>
+        `);
+        prt.document.close();
+        prt.focus();
+        setTimeout(() => { prt.print(); prt.close(); }, 500);
+    }
+
+    async function openEmailSO(id) {
+        const so = salesOrders.find(x => x.id === id);
+        const cust = customersList.find(c => c.id === so.customer_id) || {};
+        
+        let templates = [];
+        try {
+            const r = await apiFetch('/api/settings/email-templates');
+            if(r.ok) templates = await r.json();
+        } catch(e) {}
+        const tpl = templates.find(t => t.name === 'Sales Order Creation') || {subject: 'Your Order', body_template: 'Hello,\nHere is your order details.'};
+        
+        let cinfo = {name: 'Your Company'};
+        try {
+            const r = await apiFetch('/api/settings/company-info');
+            if(r.ok) cinfo = await r.json();
+        } catch(e) {}
+        
+        let subj = tpl.subject.replace('{{order_no}}', so.so_number);
+        let body = tpl.body_template.replace('{{order_no}}', so.so_number).replace('{{company_name}}', cinfo.name);
+        
+        document.getElementById('email_to').value = cust.email || '';
+        document.getElementById('email_subject').value = subj;
+        document.getElementById('email_body').value = body;
+        
+        openModal('emailModal');
+    }
+
+    function sendEmail() {
+        alert("Email sent successfully! (Mocked)");
+        closeModal('emailModal');
+    }
+
+    // INIT
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Safe check so we don't throw error if loadItems is not defined
+        if(typeof loadItems === 'function') loadItems();
+        
+        await loadGlobalWarehouseData();
+        await loadCustomers();
+        loadSalesOrders();
+    });
 </script>
 {% endblock %}

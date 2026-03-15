@@ -83,6 +83,79 @@
         </div>
     </nav>
 
+    <script>
+        // Check if user is logged in
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            const currentPath = window.location.pathname;
+
+            // List of paths that don't require authentication
+            const publicPaths = ['/api/users/login', '/register', '/forgot-password'];
+
+            if (!token && !publicPaths.includes(currentPath) && currentPath !== '/') {
+                window.location.href = '/api/users/login';
+                return false;
+            }
+            return true;
+        }
+
+        // Logout function
+        async function logout() {
+            try {
+                const token = localStorage.getItem('token');
+                if (token) {
+                    await fetch('/api/users/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+            } finally {
+                localStorage.removeItem('token');
+                localStorage.removeItem('selectedSite');
+                localStorage.removeItem('userData');
+                window.location.href = '/api/users/login';
+            }
+        }
+
+        // Global Authenticated Fetch Helper
+        async function apiFetch(url, options = {}) {
+            const token = localStorage.getItem('token');
+            if (token) {
+                options.headers = options.headers || {};
+                options.headers['Authorization'] = 'Bearer ' + token;
+            }
+            const response = await fetch(url, options);
+            if (response.status === 401) {
+                // If unauthorized, redirect to login
+                logout();
+            }
+            return response;
+        }
+
+        // -----------------------------------------------------------------------
+        // Site Selection Logic
+        // -----------------------------------------------------------------------
+
+        // Returns the saved site object {id, name} or null
+        function getSavedSite() {
+            try { return JSON.parse(localStorage.getItem('selectedSite')); } catch { return null; }
+        }
+
+        function applyTheme(theme) {
+            if (theme === 'system') {
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                document.body.className = prefersDark ? 'dark-mode' : 'light-mode';
+            } else {
+                document.body.className = theme + '-mode';
+            }
+        }
+    </script>
+
     <!-- Main Container -->
     <div class="container">
         <!-- Sidebar -->
@@ -155,6 +228,21 @@
             }
         }
 
+        // Global Authenticated Fetch Helper
+        async function apiFetch(url, options = {}) {
+            const token = localStorage.getItem('token');
+            if (token) {
+                options.headers = options.headers || {};
+                options.headers['Authorization'] = 'Bearer ' + token;
+            }
+            const response = await fetch(url, options);
+            if (response.status === 401) {
+                // If unauthorized, redirect to login
+                logout();
+            }
+            return response;
+        }
+
         // -----------------------------------------------------------------------
         // Site Selection Logic
         // -----------------------------------------------------------------------
@@ -167,14 +255,16 @@
         function changeSite(site, skipConfirm) {
             // site = {id, name, site_type}
             const current = getSavedSite();
-            const isSame = current && current.id === site.id;
-            if (isSame) return;
+            
+            // Always update the UI text to ensure "Loading..." is replaced
+            document.getElementById('currentSite').innerText = site.name;
+            window.activeSiteId = site.id;
 
+            const isSame = current && current.id === site.id;
+            
             const doChange = () => {
                 localStorage.setItem('selectedSite', JSON.stringify(site));
-                window.activeSiteId = site.id;
-                document.getElementById('currentSite').innerText = site.name;
-
+                
                 // Persist to server
                 const token = localStorage.getItem('token');
                 if (token) {
@@ -185,13 +275,17 @@
                     }).catch(e => console.warn('Could not persist site selection:', e));
                 }
 
-                if (!skipConfirm) window.location.reload();
+                if (!skipConfirm) {
+                    window.location.reload();
+                }
             };
+
+            if (isSame) return;
 
             if (skipConfirm) {
                 doChange();
             } else {
-                if (confirm(`Switch to site "${site.name}"? The page will reload.`)) doChange();
+                doChange();
             }
         }
 
@@ -242,26 +336,21 @@
 
                     if (userData.theme_preference) setTheme(userData.theme_preference);
 
-                    // Determine the site to activate:
-                    // priority: localStorage > server default_site_id > first available
+                    // Determine the site to activate
                     let savedSite = getSavedSite();
                     let activeSite = null;
 
                     if (sites.length > 0) {
-                        // 1. Try to restore from localStorage
                         if (savedSite) {
                             activeSite = sites.find(s => s.id === savedSite.id) || null;
                         }
-                        // 2. Fall back to server default_site_id
                         if (!activeSite && userData.default_site_id) {
                             activeSite = sites.find(s => s.id === userData.default_site_id) || null;
                         }
-                        // 3. Fall back to first available
                         if (!activeSite) activeSite = sites[0];
 
-                        // Store globally
                         window.activeSiteId = activeSite.id;
-                        changeSite(activeSite, true); // silent, no reload
+                        changeSite(activeSite, true);
                     }
 
                 } else if (res.status === 401) {
@@ -271,7 +360,7 @@
                 console.error('Error loading user data:', e);
             }
 
-            // Restrict settings page for non-admin without sites
+            // Restrict settings page
             const isSettingsPage = window.location.pathname.startsWith('/api/settings');
             const isAdmin = userRole && (userRole.toLowerCase() === 'admin');
 
@@ -283,26 +372,27 @@
 
             // Populate site dropdown
             const dropdown = document.getElementById('siteDropdown');
-            dropdown.innerHTML = '';
-
-            if (sites && sites.length > 0) {
-                sites.forEach(s => {
-                    const typeIcon = {
-                        shop: 'fa-store', head_office: 'fa-building', branch: 'fa-code-branch',
-                        outlet: 'fa-tag', warehouse: 'fa-warehouse', admin_office: 'fa-briefcase', other: 'fa-location-dot'
-                    }[s.site_type] || 'fa-location-dot';
-                    dropdown.innerHTML += `
-                        <a href="#" onclick="changeSite({id:${s.id},name:'${s.name.replace(/'/g, "\\'")}'})" 
-                           style="display:flex;align-items:center;gap:8px;" 
-                           id="site-opt-${s.id}">
-                            <i class="fa-solid ${typeIcon}" style="width:16px;text-align:center;opacity:0.7;"></i>
-                            ${s.name}
-                        </a>`;
-                });
-            } else {
-                const label = isAdmin ? 'No sites configured (Admin mode)' : 'No sites assigned';
-                dropdown.innerHTML = `<a href="#" style="opacity:0.6;">${label}</a>`;
-                document.getElementById('currentSite').innerText = isAdmin ? 'Admin Mode' : 'No Sites';
+            if (dropdown) {
+                dropdown.innerHTML = '';
+                if (sites && sites.length > 0) {
+                    sites.forEach(s => {
+                        const typeIcon = {
+                            shop: 'fa-store', head_office: 'fa-building', branch: 'fa-code-branch',
+                            outlet: 'fa-tag', warehouse: 'fa-warehouse', admin_office: 'fa-briefcase', other: 'fa-location-dot'
+                        }[s.site_type] || 'fa-location-dot';
+                        dropdown.innerHTML += `
+                            <a href="#" onclick="changeSite({id:${s.id},name:'${s.name.replace(/'/g, "\\'")}'})" 
+                               style="display:flex;align-items:center;gap:8px;" 
+                               id="site-opt-${s.id}">
+                                <i class="fa-solid ${typeIcon}" style="width:16px;text-align:center;opacity:0.7;"></i>
+                                ${s.name}
+                            </a>`;
+                    });
+                } else {
+                    const label = isAdmin ? 'No sites configured (Admin mode)' : 'No sites assigned';
+                    dropdown.innerHTML = `<a href="#" style="opacity:0.6;">${label}</a>`;
+                    document.getElementById('currentSite').innerText = isAdmin ? 'Admin Mode' : 'No Sites';
+                }
             }
         }
 
