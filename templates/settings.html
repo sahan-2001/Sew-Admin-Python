@@ -13,13 +13,50 @@
 <div class="tabs-container glass" style="padding: 20px; border-radius: 12px;">
     <div
         style="display: flex; gap: 15px; border-bottom: 1px solid var(--border-glass); padding-bottom: 10px; margin-bottom: 20px;">
+        <button class="tab-btn active" onclick="switchTab(event, 'users')">Users & Permissions</button>
+        <button class="tab-btn" onclick="switchTab(event, 'sites')">Sites</button>
         <button class="tab-btn" onclick="switchTab(event, 'currencies')">Currencies</button>
         <button class="tab-btn" onclick="switchTab(event, 'terms')">Payment Terms & Methods</button>
         <button class="tab-btn" onclick="switchTab(event, 'delivery')">Delivery Terms</button>
         <button class="tab-btn" onclick="switchTab(event, 'vat')">VAT & Taxes</button>
         <button class="tab-btn" onclick="switchTab(event, 'categories')">Categories</button>
     </div>
+    <!-- Users Tab -->
+    <div id="users" class="tab-content active">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3>Users & Granular Access</h3>
+            <button class="btn btn-primary glass-btn btn-sm" onclick="openUserModal()"><i class="fa-solid fa-user-plus"></i> Add User</button>
+        </div>
+        <div class="table-responsive">
+            <table class="modern-table" style="font-size: 0.9rem;">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Role</th>
+                        <th>Assigned Sites</th>
+                        <th>Module Permissions</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="users_tbody">
+                    <tr>
+                        <td colspan="5" style="text-align: center;">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 
+    <!-- Sites Tab -->
+    <div id="sites" class="tab-content" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3>Company Sites</h3>
+            <button class="btn btn-primary glass-btn btn-sm" onclick="openCreateSiteModal()"><i class="fa-solid fa-plus"></i> Add Site</button>
+        </div>
+        <div id="sitesContainer">
+            <p style="color: var(--text-muted); text-align:center;">Loading sites...</p>
+        </div>
+    </div>
 
     <!-- Currencies Tab -->
     <div id="currencies" class="tab-content" style="display: none;">
@@ -184,19 +221,47 @@
     </div>
 </div>
 
-<!-- Assign Users Modal -->
-<div id="assignUsersModal" class="modal">
-    <div class="modal-content">
-        <span class="close-modal" onclick="closeModal('assignUsersModal')">&times;</span>
-        <h2><i class="fa-solid fa-users"></i> Assign Users to Site</h2>
+<!-- User Modal -->
+<div id="userModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <span class="close-modal" onclick="closeModal('userModal')">&times;</span>
+        <h2 id="userModalTitle"><i class="fa-solid fa-user-plus"></i> Add User</h2>
         <br>
-        <input type="hidden" id="assign_site_id" />
+        <input type="hidden" id="edit_user_id" />
         <div class="form-group">
-            <label>Select Users</label>
-            <select id="assign_users_select" multiple style="height: 150px;"></select>
-            <small style="color:var(--text-muted);">Hold Ctrl/Cmd to select multiple users</small>
+            <label>Username</label>
+            <input type="text" id="user_username" />
         </div>
-        <button class="btn btn-primary" style="width:100%" onclick="submitAssignUsers()">Assign Users</button>
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="user_email" />
+        </div>
+        <div class="form-group">
+            <label>Password <span id="passwordHelp" style="font-size: 0.8em; color: var(--text-muted);"></span></label>
+            <input type="password" id="user_password" />
+        </div>
+        <div class="form-group">
+            <label>Role</label>
+            <select id="user_role">
+                <option value="admin">Admin</option>
+                <option value="manager">Manager</option>
+                <option value="worker">Worker</option>
+                <option value="accountant">Accountant</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Status</label>
+            <select id="user_active">
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Permissions (JSON Format)</label>
+            <textarea id="user_permissions" rows="4" style="width: 100%; padding: 8px; border-radius: 6px; background: var(--bg-body); border: 1px solid var(--border-glass); color: var(--text-main); font-family: inherit;"></textarea>
+            <small style="color: var(--text-muted);">e.g. {"sales": ["create", "edit", "view"]}</small>
+        </div>
+        <button class="btn btn-primary" id="userModalBtn" style="width:100%" onclick="saveUser()">Create User</button>
     </div>
 </div>
 
@@ -250,27 +315,6 @@
         cursor: pointer;
         font-size: 1.5rem;
         color: var(--text-muted);
-    }
-
-    .form-group {
-        margin-bottom: 1rem;
-    }
-
-    .form-group label {
-        display: block;
-        margin-bottom: 0.5rem;
-        font-weight: 500;
-        font-size: 0.9rem;
-    }
-
-    .form-group input,
-    .form-group select {
-        width: 100%;
-        padding: 0.75rem;
-        border: 1px solid var(--border-glass);
-        background: var(--bg-body);
-        color: var(--text-main);
-        border-radius: 0.5rem;
     }
 </style>
 
@@ -415,15 +459,285 @@
 
     async function loadAllUsers() {
         try {
-            const res = await fetchData('/api/users/');
-            if (res.ok) allUsersList = await res.json();
+            const res = await fetchData('/api/settings/users');
+            if (res.ok) {
+                allUsersList = await res.json();
+                renderUsers(allUsersList);
+            }
         } catch (e) { console.error("Error loading users:", e); }
     }
 
-    document.addEventListener("DOMContentLoaded", () => {
+    function renderUsers(users) {
+        const tbody = document.getElementById("users_tbody");
+        tbody.innerHTML = "";
+        
+        users.forEach(u => {
+            let permsHtml = "";
+            if(u.role === "admin" || u.role === "ADMIN") {
+                permsHtml = "<i class='fa-solid fa-star text-yellow'></i> Full Access";
+            } else if(u.permissions) {
+                permsHtml = "<div style='display:flex; gap: 5px; flex-wrap: wrap;'>";
+                for(const [mod, acts] of Object.entries(u.permissions)) {
+                    permsHtml += `<span class='badge' style='background: rgba(255,255,255,0.1);'>${mod}: ${acts.join(', ')}</span>`;
+                }
+                permsHtml += "</div>";
+            }
+            
+            let roleBadgeClass = "badge ";
+            if(u.role === "admin" || u.role === "ADMIN") roleBadgeClass += "in-progress";
+            else if(u.role === "manager") roleBadgeClass += "material";
+            else roleBadgeClass += "completed";
+
+            const permsStr = JSON.stringify(u.permissions || {}).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
+            // Build sites display
+            let sitesHtml = "<div style='display:flex;gap:4px;flex-wrap:wrap;'>";
+            if(u.available_sites && u.available_sites.length > 0) {
+                u.available_sites.forEach(s => {
+                    sitesHtml += `<span class='badge' style='background:rgba(37,99,235,0.25);color:#60a5fa;font-size:0.75rem;'>
+                        <i class='fa-solid fa-location-dot' style='font-size:0.7rem;'></i> ${s.name}
+                        <span onclick="unassignUserSite(${s.id},${u.id})" style='cursor:pointer;margin-left:4px;opacity:0.7;' title='Remove'>&#x2715;</span>
+                    </span>`;
+                });
+            } else {
+                sitesHtml += `<span style='color:var(--text-muted);font-size:0.8rem;'>None</span>`;
+            }
+            sitesHtml += `</div>`;
+
+            tbody.innerHTML += `
+                <tr>
+                    <td><strong>${u.username}</strong><br><small>${u.email || ''}</small>${!u.is_active ? ' <span style="color:var(--danger)">(Inactive)</span>' : ''}</td>
+                    <td><span class="${roleBadgeClass}">${u.role.charAt(0).toUpperCase() + u.role.slice(1)}</span></td>
+                    <td>${sitesHtml}</td>
+                    <td>${permsHtml}</td>
+                    <td class="action-cell">
+                        <button class="icon-btn edit-btn" title="Edit User" onclick="openEditUserModal(${u.id}, '${u.username}', '${u.email || ''}', '${u.role}', ${u.is_active}, '${permsStr}')"><i class="fa-solid fa-pen"></i></button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+
+    function openUserModal() {
+        document.getElementById("userModalTitle").innerHTML = "<i class='fa-solid fa-user-plus'></i> Add User";
+        document.getElementById("userModalBtn").innerText = "Create User";
+        document.getElementById("edit_user_id").value = "";
+        document.getElementById("user_username").value = "";
+        document.getElementById("user_username").disabled = false;
+        document.getElementById("user_email").value = "";
+        document.getElementById("user_password").value = "";
+        document.getElementById("passwordHelp").innerText = "(Required)";
+        document.getElementById("user_role").value = "worker";
+        document.getElementById("user_active").value = "true";
+        document.getElementById("user_permissions").value = "{}";
+        openModal("userModal");
+    }
+
+    function openEditUserModal(id, username, email, role, is_active, permsStr) {
+        document.getElementById("userModalTitle").innerHTML = "<i class='fa-solid fa-pen'></i> Edit User";
+        document.getElementById("userModalBtn").innerText = "Save Changes";
+        document.getElementById("edit_user_id").value = id;
+        document.getElementById("user_username").value = username;
+        document.getElementById("user_username").disabled = true;
+        document.getElementById("user_email").value = (email === 'null' || !email) ? '' : email;
+        document.getElementById("user_password").value = "";
+        document.getElementById("passwordHelp").innerText = "(Leave blank to keep current)";
+        document.getElementById("user_role").value = role;
+        document.getElementById("user_active").value = is_active ? "true" : "false";
+        try {
+            document.getElementById("user_permissions").value = JSON.stringify(JSON.parse(permsStr), null, 2);
+        } catch(e) {
+            document.getElementById("user_permissions").value = "{}";
+        }
+        openModal("userModal");
+    }
+
+    async function saveUser() {
+        const id = document.getElementById("edit_user_id").value;
+        const username = document.getElementById("user_username").value;
+        const email = document.getElementById("user_email").value;
+        const password = document.getElementById("user_password").value;
+        const role = document.getElementById("user_role").value;
+        const is_active = document.getElementById("user_active").value === "true";
+        const permsText = document.getElementById("user_permissions").value;
+        
+        let permissions = {};
+        try {
+            if(permsText.trim() !== "") {
+                permissions = JSON.parse(permsText);
+            }
+        } catch(e) {
+            return alert("Invalid JSON format for permissions.");
+        }
+
+        let body = {};
+        if(id) {
+            body = { role, is_active, permissions };
+            if(email) body.email = email;
+            if(password) body.password = password;
+        } else {
+            if(!username || !password) return alert("Username and Password are required.");
+            body = { username, password, email: email || null, role, is_active, permissions };
+        }
+
+        try {
+            const url = id ? '/api/settings/users/' + id : '/api/settings/users';
+            const method = id ? 'PUT' : 'POST';
+            const res = await fetchData(url, {
+                method: method,
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(body)
+            });
+            if(res.ok) {
+                closeModal("userModal");
+                loadAllUsers();
+            } else {
+                alert("Error: " + (await res.json()).detail);
+            }
+        } catch(e) { alert("Network error"); }
+    }
+
+
+    const SITE_TYPE_ICONS = {
+        shop: 'fa-store', head_office: 'fa-building', branch: 'fa-code-branch',
+        outlet: 'fa-tag', warehouse: 'fa-warehouse', admin_office: 'fa-briefcase', other: 'fa-location-dot'
+    };
+    const SITE_TYPE_LABELS = {
+        shop: 'Shop', head_office: 'Head Office', branch: 'Branch',
+        outlet: 'Outlet', warehouse: 'Warehouse', admin_office: 'Admin Office', other: 'Other'
+    };
+
+    async function loadSites() {
+        try {
+            const res = await fetchData('/api/settings/sites');
+            if(res.ok) {
+                const sites = await res.json();
+                renderSites(sites);
+            }
+        } catch(e) { console.error('Error loading sites:', e); }
+    }
+
+    function renderSites(sites) {
+        const container = document.getElementById('sitesContainer');
+        if(!sites || sites.length === 0) {
+            container.innerHTML = '<p style="color:var(--text-muted);text-align:center;">No sites yet. Create one above.</p>';
+            return;
+        }
+        const users = allUsersList || [];
+        let html = '<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap:1rem;">';
+        sites.forEach(site => {
+            const icon = SITE_TYPE_ICONS[site.site_type] || 'fa-location-dot';
+            const label = SITE_TYPE_LABELS[site.site_type] || site.site_type;
+            
+            // Filter users assigned to this site
+            const assignedUsers = users.filter(u => u.available_sites && u.available_sites.find(s => s.id === site.id));
+            let usersHtml = assignedUsers.length > 0
+                ? assignedUsers.map(u => `<span class='badge' style='background:rgba(16,185,129,0.2);color:#34d399;'>
+                    <i class='fa-solid fa-user' style='font-size:0.7rem;'></i> ${u.username}
+                    <span onclick="unassignUserSite(${site.id},${u.id})" style='cursor:pointer;margin-left:3px;opacity:0.7;' title='Remove'>&#x2715;</span>
+                    </span>`).join('')
+                : '<span style="color:var(--text-muted);font-size:0.8rem;">No users assigned</span>';
+
+            html += `
+                <div class="glass" style="padding:1rem;border-radius:0.75rem;border:1px solid var(--border-glass);">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.75rem;">
+                        <div>
+                            <i class="fa-solid ${icon}" style="color:var(--primary);margin-right:6px;"></i>
+                            <strong>${site.name}</strong>
+                            <div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px;">${label}</div>
+                        </div>
+                        <button class="icon-btn danger-btn" style="padding:4px 8px;" onclick="deleteSite(${site.id})" title="Delete site"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                    <div style="margin-bottom:0.85rem;">
+                        <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px;">Assigned Users:</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:4px;">${usersHtml}</div>
+                    </div>
+                    <div style="margin-top:0.75rem; display:flex; gap:5px;">
+                        <select id="assign-select-${site.id}" style="flex:1; padding:4px 8px;border-radius:6px;background:var(--bg-body);border:1px solid var(--border-glass);color:var(--text-main);font-size:0.8rem;">
+                            <option value="">-- Assign User --</option>
+                            ${users.filter(u => !u.available_sites || !u.available_sites.find(s => s.id === site.id))
+                                .map(u => `<option value="${u.id}">${u.username}</option>`).join('')}
+                        </select>
+                        <button class="btn btn-primary btn-sm" onclick="assignUserToSite(${site.id})">
+                             Assign
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    async function submitCreateSite() {
+        const name = document.getElementById('site_name').value.trim();
+        const site_type = document.getElementById('site_type').value;
+        if(!name) return alert('Site name is required.');
+        try {
+            const res = await fetchData('/api/settings/sites', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name, site_type})
+            });
+            if(res.ok) {
+                closeModal('createSiteModal');
+                loadSites();
+            } else {
+                alert('Error: ' + (await res.json()).detail);
+            }
+        } catch(e) { alert('Network error'); }
+    }
+
+    async function deleteSite(id) {
+        if(!confirm('Delete this site?')) return;
+        try {
+            const res = await fetchData('/api/settings/sites/' + id, { method: 'DELETE' });
+            if(res.ok) loadSites();
+            else alert('Error: ' + (await res.json()).detail);
+        } catch(e) { alert('Network error'); }
+    }
+
+    async function assignUserToSite(siteId) {
+        const userId = document.getElementById('assign-select-' + siteId).value;
+        if(!userId) return alert('Please select a user.');
+        try {
+            const res = await fetchData(`/api/settings/sites/${siteId}/assign/${userId}`, { method: 'POST' });
+            if(res.ok) { loadAllUsers(); loadSites(); }
+            else alert('Error: ' + (await res.json()).detail);
+        } catch(e) { alert('Network error'); }
+    }
+
+    async function unassignUserSite(siteId, userId) {
+        if(!confirm('Remove user from site?')) return;
+        try {
+            const res = await fetchData(`/api/settings/sites/${siteId}/unassign/${userId}`, { method: 'DELETE' });
+            if(res.ok) { loadAllUsers(); loadSites(); }
+            else alert('Error: ' + (await res.json()).detail);
+        } catch(e) { alert('Network error'); }
+    }
+
+    async function loadSiteTypes() {
+        try {
+            const res = await fetchData('/api/settings/sites/types');
+            if(res.ok) {
+                const types = await res.json();
+                const select = document.getElementById('site_type');
+                select.innerHTML = types.map(t => `<option value="${t.value}">${t.label}</option>`).join('');
+            }
+        } catch(e) { console.error('Error loading site types:', e); }
+    }
+
+    function openCreateSiteModal() {
+        document.getElementById('site_name').value = '';
+        openModal('createSiteModal');
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
         loadCategories();
         loadSubCategories();
-        loadAllUsers();
+        await loadAllUsers();
+        await loadSites();
+        loadSiteTypes();
     });
 </script>
 {% endblock %}
