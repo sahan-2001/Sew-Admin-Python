@@ -1,0 +1,1132 @@
+{% extends "base.html" %}
+{% block title %}System Settings{% endblock %}
+{% block side_settings %}active{% endblock %}
+
+{% block content %}
+<header class="content-header">
+    <div>
+        <h1>System Settings</h1>
+        <p class="subtitle">Configure master data like Currencies, Sites, Terms, and UOM.</p>
+    </div>
+</header>
+
+<div class="tabs-container glass" style="padding: 20px; border-radius: 12px;">
+    <div
+        style="display: flex; gap: 15px; border-bottom: 1px solid var(--border-glass); padding-bottom: 10px; margin-bottom: 20px;">
+        <button class="tab-btn active" onclick="switchTab(event, 'users')">Users & Permissions</button>
+        <button class="tab-btn" onclick="switchTab(event, 'sites')">Sites</button>
+        <button class="tab-btn" onclick="switchTab(event, 'currencies')">Currencies</button>
+        <button class="tab-btn" onclick="switchTab(event, 'terms')">Payment Terms & Methods</button>
+        <button class="tab-btn" onclick="switchTab(event, 'delivery')">Delivery Terms</button>
+        <button class="tab-btn" onclick="switchTab(event, 'vat')">VAT & Taxes</button>
+        <button class="tab-btn" onclick="switchTab(event, 'categories')">Categories</button>
+        <button class="tab-btn" onclick="switchTab(event, 'company')">Company Info</button>
+        <button class="tab-btn" onclick="switchTab(event, 'approvals')">Approval Setup</button>
+        <button class="tab-btn" onclick="switchTab(event, 'emails')">Email Templates</button>
+    </div>
+    <!-- Users Tab -->
+    <div id="users" class="tab-content active">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3>Users & Granular Access</h3>
+            <button class="btn btn-primary glass-btn btn-sm" onclick="openUserModal()"><i
+                    class="fa-solid fa-user-plus"></i> Add User</button>
+        </div>
+        <div class="table-responsive">
+            <table class="modern-table" style="font-size: 0.9rem;">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Role</th>
+                        <th>Assigned Sites</th>
+                        <th>Module Permissions</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="users_tbody">
+                    <tr>
+                        <td colspan="5" style="text-align: center;">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Sites Tab -->
+    <div id="sites" class="tab-content" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3>Company Sites</h3>
+            <button class="btn btn-primary glass-btn btn-sm" onclick="openCreateSiteModal()"><i
+                    class="fa-solid fa-plus"></i> Add Site</button>
+        </div>
+        <div id="sitesContainer">
+            <p style="color: var(--text-muted); text-align:center;">Loading sites...</p>
+        </div>
+    </div>
+
+    <!-- Currencies Tab -->
+    <div id="currencies" class="tab-content" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3>Currencies (Global System Currencies)</h3>
+            <button class="btn btn-primary glass-btn btn-sm" onclick="openCurrencyModal()"><i class="fa-solid fa-plus"></i> Add Currency</button>
+        </div>
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Symbol</th>
+                    <th>Global Default</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="currencies_tbody">
+                <tr>
+                    <td colspan="5" style="text-align: center;">Loading...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Other tabs (Terms, Delivery, VAT) follows similar structure -->
+    <div id="terms" class="tab-content" style="display: none;">
+        <h3>Payment Methods & Terms</h3>
+        <p>Manage NET 30, Cash On Delivery, Bank Transfers, etc.</p>
+    </div>
+
+    <div id="delivery" class="tab-content" style="display: none;">
+        <h3>Delivery Terms</h3>
+        <p>Manage FOB, CIF, EXW, etc.</p>
+    </div>
+
+    <div id="vat" class="tab-content" style="display: none;">
+        <h3>VAT Groups</h3>
+        <p>Manage Item VAT, Supplier VAT, and Customer Exemptions.</p>
+    </div>
+
+    <!-- Company Info Tab -->
+    <div id="company" class="tab-content" style="display: none;">
+        <div class="data-panel glass" style="max-width: 800px;">
+            <div class="panel-header" style="margin-bottom: 1.5rem;">
+                <h3 style="margin:0;">Company Information</h3>
+                <p class="subtitle text-sm" style="margin-top: 5px;">Update company details used on documents (PDFs,
+                    Emails).</p>
+            </div>
+            <div class="form-grid">
+                <div class="form-group col-span-2">
+                    <label>Company Name</label>
+                    <input type="text" id="ci_name">
+                </div>
+                <div class="form-group col-span-2">
+                    <label>Address</label>
+                    <textarea id="ci_address" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Phone Number</label>
+                    <input type="text" id="ci_phone">
+                </div>
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="ci_email">
+                </div>
+                <div class="form-group">
+                    <label>Website</label>
+                    <input type="text" id="ci_website">
+                </div>
+                <div class="form-group">
+                    <label>Tax/VAT ID</label>
+                    <input type="text" id="ci_tax_id">
+                </div>
+                <div class="form-group col-span-2">
+                    <label>Logo URL (Full Path)</label>
+                    <input type="text" id="ci_logo_url">
+                </div>
+                <div class="form-group col-span-2" style="text-align: right;">
+                    <button class="btn btn-primary glass-btn" onclick="saveCompanyInfo()">
+                        <i class="fa-solid fa-save"></i> Save Settings
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Approvals Tab -->
+    <div id="approvals" class="tab-content" style="display: none;">
+        <div class="data-panel glass" style="max-width: 800px;">
+            <div class="panel-header" style="margin-bottom: 1.5rem;">
+                <h3 style="margin:0;">Approval Workflows</h3>
+                <p class="subtitle text-sm" style="margin-top: 5px;">Configure which documents require multi-stage
+                    approval before release.</p>
+            </div>
+            <div class="table-responsive">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>Document Type</th>
+                            <th>Requires Approval</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="approvals_tbody">
+                        <tr>
+                            <td colspan="3" style="text-align: center;">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emails Tab -->
+    <div id="emails" class="tab-content" style="display: none;">
+        <div class="data-panel glass" style="max-width: 1000px;">
+            <div class="panel-header" style="margin-bottom: 1.5rem;">
+                <h3 style="margin:0;">Email Templates</h3>
+                <p class="subtitle text-sm" style="margin-top: 5px;">Manage templates used to send automated/manual
+                    document emails.</p>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
+                <div class="table-responsive">
+                    <table class="modern-table">
+                        <thead>
+                            <tr>
+                                <th>Template Name</th>
+                            </tr>
+                        </thead>
+                        <tbody id="emails_tbody">
+                            <tr>
+                                <td>Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="data-panel glass" id="email_editor_panel" style="display:none; padding:15px;">
+                    <input type="hidden" id="em_id">
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label>Template Name</label>
+                        <input type="text" id="em_name" readonly style="background: rgba(0,0,0,0.1);">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label>Email Subject</label>
+                        <input type="text" id="em_subject">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label>Body Content (Supports variables like {{order_no}})</label>
+                        <textarea id="em_body" rows="12" style="font-family: monospace;"></textarea>
+                    </div>
+                    <div style="text-align: right;">
+                        <button class="btn btn-primary glass-btn" onclick="saveEmailTemplate()">
+                            <i class="fa-solid fa-save"></i> Save Template
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Categories Tab -->
+    <div id="categories" class="tab-content" style="display: none;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <!-- Categories List -->
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3>Categories</h3>
+                    <button class="btn btn-primary glass-btn btn-sm" onclick="openModal('createCategoryModal')"><i
+                            class="fa-solid fa-plus"></i> Add Category</button>
+                </div>
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Category Name</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cat_tbody">
+                        <tr>
+                            <td colspan="3" style="text-align: center;">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Sub-Categories List -->
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3>Sub-Categories</h3>
+                    <button class="btn btn-primary glass-btn btn-sm" onclick="openCreateSubCategoryModal()"><i
+                            class="fa-solid fa-plus"></i> Add Sub-Category</button>
+                </div>
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Parent Category</th>
+                            <th>Sub-Category Name</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="subcat_tbody">
+                        <tr>
+                            <td colspan="3" style="text-align: center;">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Create Category Modal -->
+<div id="createCategoryModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal('createCategoryModal')">&times;</span>
+        <h2><i class="fa-solid fa-plus"></i> Create Category</h2>
+        <br>
+        <div class="form-group">
+            <label>Category Name</label>
+            <input type="text" id="cat_name" />
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="submitCreateCategory()">Create Category</button>
+    </div>
+</div>
+
+<!-- Create Sub-Category Modal -->
+<div id="createSubCategoryModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal('createSubCategoryModal')">&times;</span>
+        <h2><i class="fa-solid fa-plus"></i> Create Sub-Category</h2>
+        <br>
+        <div class="form-group">
+            <label>Parent Category</label>
+            <select id="sc_parent_cat"></select>
+        </div>
+        <div class="form-group">
+            <label>Sub-Category Name</label>
+            <input type="text" id="sc_name" />
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="submitCreateSubCategory()">Create
+            Sub-Category</button>
+    </div>
+</div>
+
+
+<!-- Create Site Modal -->
+<div id="createSiteModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal('createSiteModal')">&times;</span>
+        <h2 id="siteModalTitle"><i class="fa-solid fa-plus"></i> Create Site</h2>
+        <br>
+        <input type="hidden" id="edit_site_id" />
+        <div class="form-group">
+            <label>Site Name</label>
+            <input type="text" id="site_name" />
+        </div>
+        <div class="form-group">
+            <label>Site Type</label>
+            <select id="site_type"></select>
+        </div>
+        <button class="btn btn-primary" id="siteModalBtn" style="width:100%" onclick="submitCreateSite()">Create
+            Site</button>
+    </div>
+</div>
+
+<!-- User Modal -->
+<div id="userModal" class="modal">
+    <div class="modal-content glass" style="max-width:520px;">
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h2 id="userModalTitle" style="display:flex; gap:8px; align-items:center;">
+                <i class="fa-solid fa-user-plus"></i> Add User
+            </h2>
+            <span class="close-modal" onclick="closeModal('userModal')">
+                <i class="fa-solid fa-xmark"></i>
+            </span>
+        </div>
+
+        <input type="hidden" id="edit_user_id" />
+
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="user_username" placeholder="Enter username">
+        </div>
+
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="user_email" placeholder="Enter email address">
+        </div>
+
+        <div class="form-group">
+            <label>
+                Password
+                <span id="passwordHelp" style="font-size:0.8rem;color:var(--text-muted);"></span>
+            </label>
+            <input type="password" id="user_password" placeholder="Enter password">
+        </div>
+
+        <div class="form-group">
+            <label>Role</label>
+            <select id="user_role">
+                <option value="admin">Admin</option>
+                <option value="manager">Manager</option>
+                <option value="worker">Worker</option>
+                <option value="accountant">Accountant</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Status</label>
+            <select id="user_active">
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Permissions (JSON Format)</label>
+
+            <textarea id="user_permissions" rows="4" placeholder='{"sales": ["create","edit","view"]}' style="
+                    width:100%;
+                    padding:0.75rem;
+                    border-radius:0.5rem;
+                    background:var(--bg-body);
+                    border:1px solid var(--border-glass);
+                    color:var(--text-main);
+                    font-family:monospace;
+                    font-size:0.85rem;
+                ">
+            </textarea>
+
+            <small style="color:var(--text-muted)">
+                Example: {"sales": ["create","edit","view"]}
+            </small>
+        </div>
+
+        <div style="margin-top:1.5rem;">
+            <button class="btn btn-primary glass-btn" id="userModalBtn" style="width:100%" onclick="saveUser()">
+                <i class="fa-solid fa-user-check"></i> Create User
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<!-- Currency Modal -->
+<div id="currencyModal" class="modal">
+    <div class="modal-content glass">
+        <span class="close-modal" onclick="closeModal('currencyModal')">&times;</span>
+        <h3 id="currencyModalTitle">Add Currency</h3>
+        <input type="hidden" id="curr_id">
+        <div class="form-group">
+            <label>Currency Code (e.g. USD)</label>
+            <input type="text" id="curr_code" placeholder="USD">
+        </div>
+        <div class="form-group">
+            <label>Currency Name</label>
+            <input type="text" id="curr_name" placeholder="US Dollar">
+        </div>
+        <div class="form-group">
+            <label>Symbol</label>
+            <input type="text" id="curr_symbol" placeholder="$">
+        </div>
+        <div class="form-group" style="flex-direction: row; align-items: center; gap: 10px; margin-top: 10px;">
+            <input type="checkbox" id="curr_is_global" style="width: auto; height: auto;">
+            <label for="curr_is_global" style="margin-bottom: 0;">Set as Global Default</label>
+        </div>
+        <div style="margin-top:1.5rem;">
+            <button class="btn btn-primary glass-btn" style="width:100%" onclick="saveCurrency()">
+                <i class="fa-solid fa-check"></i> Save Currency
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function switchTab(event, tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabId).style.display = 'block';
+        event.currentTarget.classList.add('active');
+    }
+</script>
+<style>
+    .tab-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 5px 10px;
+        font-weight: 500;
+    }
+
+    .tab-btn.active {
+        color: var(--primary);
+        border-bottom: 2px solid var(--primary);
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(4px);
+    }
+
+    .modal-content {
+        background: var(--bg-card);
+        padding: 2rem;
+        border-radius: 1rem;
+        width: 400px;
+        border: 1px solid var(--border-glass);
+    }
+
+    .close-modal {
+        float: right;
+        cursor: pointer;
+        font-size: 1.5rem;
+        color: var(--text-muted);
+    }
+</style>
+
+<script>
+    let categoriesList = [];
+    let allUsersList = [];
+    let siteTypesList = [];
+    let currenciesList = [];
+
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    async function loadCategories() {
+        try {
+            const res = await fetch('/api/settings/categories');
+            categoriesList = await res.json();
+            const tbody = document.getElementById('cat_tbody');
+            tbody.innerHTML = '';
+            if (categoriesList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center">No categories found.</td></tr>';
+            } else {
+                categoriesList.forEach(c => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${c.id}</td>
+                            <td>${c.name}</td>
+                            <td class="action-cell">
+                                <button class="icon-btn danger-btn" onclick="deleteCategory(${c.id})"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+        } catch (e) { console.error("Error loading categories:", e); }
+    }
+
+    async function loadSubCategories() {
+        try {
+            const res = await fetch('/api/settings/sub-categories');
+            const data = await res.json();
+            const tbody = document.getElementById('subcat_tbody');
+            tbody.innerHTML = '';
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center">No sub-categories found.</td></tr>';
+            } else {
+                data.forEach(c => {
+                    const parentName = categoriesList.find(cat => cat.id === c.category_id)?.name || 'Unknown';
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${c.id}</td>
+                            <td><span style="color:var(--primary);font-size:0.85rem">${parentName}</span></td>
+                            <td>${c.name}</td>
+                            <td class="action-cell">
+                                <button class="icon-btn danger-btn" onclick="deleteSubCategory(${c.id})"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+        } catch (e) { console.error("Error loading sub-categories:", e); }
+    }
+
+    async function submitCreateCategory() {
+        const name = document.getElementById('cat_name').value;
+        if (!name) return alert("Please enter a category name");
+        try {
+            const res = await fetch('/api/settings/categories', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name })
+            });
+            if (!res.ok) alert("Error: " + (await res.json()).detail);
+            else { closeModal('createCategoryModal'); document.getElementById('cat_name').value = ''; loadCategories(); }
+        } catch (e) { alert("Network Error"); }
+    }
+
+    async function deleteCategory(id) {
+        if (!confirm("Are you sure?")) return;
+        try {
+            const res = await fetch('/api/settings/categories/' + id, { method: 'DELETE' });
+            if (!res.ok) alert("Error: " + (await res.json()).detail);
+            else { loadCategories(); loadSubCategories(); }
+        } catch (e) { alert("Network Error"); }
+    }
+
+    async function openCreateSubCategoryModal() {
+        // Always re-fetch latest categories to ensure list is up to date
+        try {
+            const res = await fetch('/api/settings/categories');
+            categoriesList = await res.json();
+        } catch (e) { console.error('Failed to refresh categories', e); }
+
+        const select = document.getElementById('sc_parent_cat');
+        select.innerHTML = '<option value="">-- Select Parent Category --</option>';
+        if (categoriesList.length === 0) {
+            select.innerHTML += '<option disabled>No categories found — create a category first</option>';
+        } else {
+            categoriesList.forEach(c => {
+                select.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+            });
+        }
+        document.getElementById('sc_name').value = '';
+        openModal('createSubCategoryModal');
+    }
+
+    async function submitCreateSubCategory() {
+        const parent_id = document.getElementById('sc_parent_cat').value;
+        const name = document.getElementById('sc_name').value.trim();
+        if (!parent_id) return alert("Please select a parent category.");
+        if (!name) return alert("Please enter a sub-category name.");
+        try {
+            const res = await fetch('/api/settings/sub-categories', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name, category_id: parseInt(parent_id) })
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                alert("Error: " + err.detail);
+            } else {
+                closeModal('createSubCategoryModal');
+                document.getElementById('sc_name').value = '';
+                await loadSubCategories();
+            }
+        } catch (e) { alert("Network Error: " + e.message); }
+    }
+
+    async function deleteSubCategory(id) {
+        if (!confirm("Are you sure?")) return;
+        try {
+            const res = await fetch('/api/settings/sub-categories/' + id, { method: 'DELETE' });
+            if (!res.ok) alert("Error: " + (await res.json()).detail);
+            else { loadSubCategories(); }
+        } catch (e) { alert("Network Error"); }
+    }
+
+    async function fetchData(url, options = {}) {
+        const token = localStorage.getItem("token");
+        if (token) {
+            options.headers = options.headers || {};
+            options.headers["Authorization"] = "Bearer " + token;
+        }
+        return fetch(url, options);
+    }
+
+    async function loadAllUsers() {
+        try {
+            const res = await fetchData('/api/settings/users');
+            if (res.ok) {
+                allUsersList = await res.json();
+                renderUsers(allUsersList);
+            }
+        } catch (e) { console.error("Error loading users:", e); }
+    }
+
+    function renderUsers(users) {
+        const tbody = document.getElementById("users_tbody");
+        tbody.innerHTML = "";
+
+        users.forEach(u => {
+            let permsHtml = "";
+            if (u.role === "admin" || u.role === "ADMIN") {
+                permsHtml = "<i class='fa-solid fa-star text-yellow'></i> Full Access";
+            } else if (u.permissions) {
+                permsHtml = "<div style='display:flex; gap: 5px; flex-wrap: wrap;'>";
+                for (const [mod, acts] of Object.entries(u.permissions)) {
+                    permsHtml += `<span class='badge' style='background: rgba(255,255,255,0.1);'>${mod}: ${acts.join(', ')}</span>`;
+                }
+                permsHtml += "</div>";
+            }
+
+            let roleBadgeClass = "badge ";
+            if (u.role === "admin" || u.role === "ADMIN") roleBadgeClass += "in-progress";
+            else if (u.role === "manager") roleBadgeClass += "material";
+            else roleBadgeClass += "completed";
+
+            const permsStr = JSON.stringify(u.permissions || {}).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
+            // Build sites display
+            let sitesHtml = "<div style='display:flex;gap:4px;flex-wrap:wrap;'>";
+            if (u.available_sites && u.available_sites.length > 0) {
+                u.available_sites.forEach(s => {
+                    sitesHtml += `<span class='badge' style='background:rgba(37,99,235,0.25);color:#60a5fa;font-size:0.75rem;'>
+                        <i class='fa-solid fa-location-dot' style='font-size:0.7rem;'></i> ${s.name}
+                        <span onclick="unassignUserSite(${s.id},${u.id})" style='cursor:pointer;margin-left:4px;opacity:0.7;' title='Remove'>&#x2715;</span>
+                    </span>`;
+                });
+            } else {
+                sitesHtml += `<span style='color:var(--text-muted);font-size:0.8rem;'>None</span>`;
+            }
+            sitesHtml += `</div>`;
+
+            tbody.innerHTML += `
+                <tr>
+                    <td><strong>${u.username}</strong><br><small>${u.email || ''}</small>${!u.is_active ? ' <span style="color:var(--danger)">(Inactive)</span>' : ''}</td>
+                    <td><span class="${roleBadgeClass}">${u.role.charAt(0).toUpperCase() + u.role.slice(1)}</span></td>
+                    <td>${sitesHtml}</td>
+                    <td>${permsHtml}</td>
+                    <td class="action-cell">
+                        <button class="icon-btn edit-btn" title="Edit User" onclick="openEditUserModal(${u.id}, '${u.username}', '${u.email || ''}', '${u.role}', ${u.is_active}, '${permsStr}')"><i class="fa-solid fa-pen"></i></button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+
+    function openUserModal() {
+        document.getElementById("userModalTitle").innerHTML = "<i class='fa-solid fa-user-plus'></i> Add User";
+        document.getElementById("userModalBtn").innerText = "Create User";
+        document.getElementById("edit_user_id").value = "";
+        document.getElementById("user_username").value = "";
+        document.getElementById("user_username").disabled = false;
+        document.getElementById("user_email").value = "";
+        document.getElementById("user_password").value = "";
+        document.getElementById("passwordHelp").innerText = "(Required)";
+        document.getElementById("user_role").value = "worker";
+        document.getElementById("user_active").value = "true";
+        document.getElementById("user_permissions").value = "{}";
+        openModal("userModal");
+    }
+
+    function openEditUserModal(id, username, email, role, is_active, permsStr) {
+        document.getElementById("userModalTitle").innerHTML = "<i class='fa-solid fa-pen'></i> Edit User";
+        document.getElementById("userModalBtn").innerText = "Save Changes";
+        document.getElementById("edit_user_id").value = id;
+        document.getElementById("user_username").value = username;
+        document.getElementById("user_username").disabled = true;
+        document.getElementById("user_email").value = (email === 'null' || !email) ? '' : email;
+        document.getElementById("user_password").value = "";
+        document.getElementById("passwordHelp").innerText = "(Leave blank to keep current)";
+        document.getElementById("user_role").value = role;
+        document.getElementById("user_active").value = is_active ? "true" : "false";
+        try {
+            document.getElementById("user_permissions").value = JSON.stringify(JSON.parse(permsStr), null, 2);
+        } catch (e) {
+            document.getElementById("user_permissions").value = "{}";
+        }
+        openModal("userModal");
+    }
+
+    async function saveUser() {
+        const id = document.getElementById("edit_user_id").value;
+        const username = document.getElementById("user_username").value;
+        const email = document.getElementById("user_email").value;
+        const password = document.getElementById("user_password").value;
+        const role = document.getElementById("user_role").value;
+        const is_active = document.getElementById("user_active").value === "true";
+        const permsText = document.getElementById("user_permissions").value;
+
+        let permissions = {};
+        try {
+            if (permsText.trim() !== "") {
+                permissions = JSON.parse(permsText);
+            }
+        } catch (e) {
+            return alert("Invalid JSON format for permissions.");
+        }
+
+        let body = {};
+        if (id) {
+            body = { role, is_active, permissions };
+            if (email) body.email = email;
+            if (password) body.password = password;
+        } else {
+            if (!username || !password) return alert("Username and Password are required.");
+            body = { username, password, email: email || null, role, is_active, permissions };
+        }
+
+        try {
+            const url = id ? '/api/settings/users/' + id : '/api/settings/users';
+            const method = id ? 'PUT' : 'POST';
+            const res = await fetchData(url, {
+                method: method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body)
+            });
+            if (res.ok) {
+                closeModal("userModal");
+                loadAllUsers();
+            } else {
+                alert("Error: " + (await res.json()).detail);
+            }
+        } catch (e) { alert("Network error"); }
+    }
+
+
+    const SITE_TYPE_ICONS = {
+        head_office: 'fa-building', branch: 'fa-code-branch', factory: 'fa-industry',
+        outlet: 'fa-tag', warehouse: 'fa-warehouse', other: 'fa-location-dot'
+    };
+    const SITE_TYPE_LABELS = {
+        head_office: 'Head Office', branch: 'Branch', factory: 'Factory',
+        outlet: 'Outlet', warehouse: 'Warehouse', other: 'Other'
+    };
+
+    async function loadSites() {
+        try {
+            const res = await fetchData('/api/settings/sites');
+            if (res.ok) {
+                const sites = await res.json();
+                renderSites(sites);
+            }
+        } catch (e) { console.error('Error loading sites:', e); }
+    }
+
+    function renderSites(sites) {
+        const container = document.getElementById('sitesContainer');
+        if (!sites || sites.length === 0) {
+            container.innerHTML = '<p style="color:var(--text-muted);text-align:center;">No sites yet. Create one above.</p>';
+            return;
+        }
+        const users = allUsersList || [];
+        let html = '<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap:1rem;">';
+        sites.forEach(site => {
+            const icon = SITE_TYPE_ICONS[site.site_type] || 'fa-location-dot';
+            const label = SITE_TYPE_LABELS[site.site_type] || site.site_type;
+
+            // Filter users assigned to this site
+            const assignedUsers = users.filter(u => u.available_sites && u.available_sites.find(s => s.id === site.id));
+            let usersHtml = assignedUsers.length > 0
+                ? assignedUsers.map(u => `<span class='badge' style='background:rgba(16,185,129,0.2);color:#34d399;'>
+                    <i class='fa-solid fa-user' style='font-size:0.7rem;'></i> ${u.username}
+                    <span onclick="unassignUserSite(${site.id},${u.id})" style='cursor:pointer;margin-left:3px;opacity:0.7;' title='Remove'>&#x2715;</span>
+                    </span>`).join('')
+                : '<span style="color:var(--text-muted);font-size:0.8rem;">No users assigned</span>';
+
+            html += `
+                <div class="glass" style="padding:1rem;border-radius:0.75rem;border:1px solid var(--border-glass);">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.75rem;">
+                        <div>
+                            <i class="fa-solid ${icon}" style="color:var(--primary);margin-right:6px;"></i>
+                            <strong>${site.name}</strong>
+                            <div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px;">${label}</div>
+                        </div>
+                        <button class="icon-btn danger-btn" style="padding:4px 8px;" onclick="deleteSite(${site.id})" title="Delete site"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                    <div style="margin-bottom:0.85rem;">
+                        <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px;">Assigned Users:</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:4px;">${usersHtml}</div>
+                    </div>
+                    <div style="margin-top:0.75rem; display:flex; gap:5px;">
+                        <select id="assign-select-${site.id}" style="flex:1; padding:4px 8px;border-radius:6px;background:var(--bg-body);border:1px solid var(--border-glass);color:var(--text-main);font-size:0.8rem;">
+                            <option value="">-- Assign User --</option>
+                            ${users.filter(u => !u.available_sites || !u.available_sites.find(s => s.id === site.id))
+                    .map(u => `<option value="${u.id}">${u.username}</option>`).join('')}
+                        </select>
+                        <button class="btn btn-primary btn-sm" onclick="assignUserToSite(${site.id})">
+                             Assign
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    async function submitCreateSite() {
+        const name = document.getElementById('site_name').value.trim();
+        const site_type = document.getElementById('site_type').value;
+        if (!name) return alert('Site name is required.');
+        try {
+            const res = await fetchData('/api/settings/sites', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, site_type })
+            });
+            if (res.ok) {
+                closeModal('createSiteModal');
+                loadSites();
+            } else {
+                alert('Error: ' + (await res.json()).detail);
+            }
+        } catch (e) { alert('Network error'); }
+    }
+
+    async function deleteSite(id) {
+        if (!confirm('Delete this site?')) return;
+        try {
+            const res = await fetchData('/api/settings/sites/' + id, { method: 'DELETE' });
+            if (res.ok) loadSites();
+            else alert('Error: ' + (await res.json()).detail);
+        } catch (e) { alert('Network error'); }
+    }
+
+    async function assignUserToSite(siteId) {
+        const userId = document.getElementById('assign-select-' + siteId).value;
+        if (!userId) return alert('Please select a user.');
+        try {
+            const res = await fetchData(`/api/settings/sites/${siteId}/assign/${userId}`, { method: 'POST' });
+            if (res.ok) { loadAllUsers(); loadSites(); }
+            else alert('Error: ' + (await res.json()).detail);
+        } catch (e) { alert('Network error'); }
+    }
+
+    async function unassignUserSite(siteId, userId) {
+        if (!confirm('Remove user from site?')) return;
+        try {
+            const res = await fetchData(`/api/settings/sites/${siteId}/unassign/${userId}`, { method: 'DELETE' });
+            if (res.ok) { loadAllUsers(); loadSites(); }
+            else alert('Error: ' + (await res.json()).detail);
+        } catch (e) { alert('Network error'); }
+    }
+
+    async function loadSiteTypes() {
+        try {
+            const res = await fetchData('/api/settings/sites/types');
+            if (res.ok) {
+                const types = await res.json();
+                const select = document.getElementById('site_type');
+                select.innerHTML = types.map(t => `<option value="${t.value}">${t.label}</option>`).join('');
+            }
+        } catch (e) { console.error('Error loading site types:', e); }
+    }
+
+    function openCreateSiteModal() {
+        document.getElementById('site_name').value = '';
+        openModal('createSiteModal');
+    }
+
+    // Company Info Logic
+    async function loadCompanyInfo() {
+        try {
+            const res = await apiFetch('/api/settings/company-info');
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById('ci_name').value = data.name || '';
+                document.getElementById('ci_address').value = data.address || '';
+                document.getElementById('ci_phone').value = data.phone || '';
+                document.getElementById('ci_email').value = data.email || '';
+                document.getElementById('ci_website').value = data.website || '';
+                document.getElementById('ci_tax_id').value = data.tax_id || '';
+                document.getElementById('ci_logo_url').value = data.logo_url || '';
+            }
+        } catch (e) { console.error(e); }
+    }
+
+    async function saveCompanyInfo() {
+        const body = {
+            name: document.getElementById('ci_name').value,
+            address: document.getElementById('ci_address').value,
+            phone: document.getElementById('ci_phone').value,
+            email: document.getElementById('ci_email').value,
+            website: document.getElementById('ci_website').value,
+            tax_id: document.getElementById('ci_tax_id').value,
+            logo_url: document.getElementById('ci_logo_url').value,
+        };
+        try {
+            const res = await apiFetch('/api/settings/company-info', {
+                method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            if (res.ok) alert("Company Info Saved Successfully.");
+            else alert("Error: " + (await res.json()).detail);
+        } catch (e) { alert("Network Error"); }
+    }
+
+    // Approvals Logic
+    let approvalsData = [];
+    async function loadApprovals() {
+        try {
+            const res = await apiFetch('/api/settings/approval-setup');
+            if (res.ok) {
+                approvalsData = await res.json();
+                const tbody = document.getElementById('approvals_tbody');
+                tbody.innerHTML = '';
+                approvalsData.forEach(a => {
+                    const checked = a.requires_approval ? 'checked' : '';
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><strong>${a.document_type}</strong></td>
+                            <td>
+                                <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
+                                    <input type="checkbox" id="app_chk_${a.id}" ${checked}> Enabled
+                                </label>
+                            </td>
+                            <td>
+                                <button class="btn btn-primary btn-sm glass-btn" onclick="saveApproval(${a.id})">Save</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+        } catch (e) { }
+    }
+
+    async function saveApproval(id) {
+        const chk = document.getElementById('app_chk_' + id).checked;
+        try {
+            const res = await apiFetch('/api/settings/approval-setup/' + id, {
+                method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requires_approval: chk })
+            });
+            if (res.ok) alert("Saved workflow setting.");
+        } catch (e) { alert("Network error"); }
+    }
+
+    // Email Templates Logic
+    let emailsData = [];
+    async function loadEmails() {
+        try {
+            const res = await apiFetch('/api/settings/email-templates');
+            if (res.ok) {
+                emailsData = await res.json();
+                const tbody = document.getElementById('emails_tbody');
+                tbody.innerHTML = '';
+                emailsData.forEach(em => {
+                    tbody.innerHTML += `
+                        <tr style="cursor:pointer;" onclick="editEmail(${em.id})">
+                            <td><i class="fa-solid fa-envelope" style="margin-right:8px; color:var(--primary);"></i> ${em.name}</td>
+                        </tr>
+                    `;
+                });
+            }
+        } catch (e) { }
+    }
+
+    function editEmail(id) {
+        const em = emailsData.find(x => x.id === id);
+        if (!em) return;
+        document.getElementById('email_editor_panel').style.display = 'block';
+        document.getElementById('em_id').value = em.id;
+        document.getElementById('em_name').value = em.name;
+        document.getElementById('em_subject').value = em.subject;
+        document.getElementById('em_body').value = em.body_template;
+    }
+
+    async function saveEmailTemplate() {
+        const id = document.getElementById('em_id').value;
+        const body = {
+            name: document.getElementById('em_name').value,
+            subject: document.getElementById('em_subject').value,
+            body_template: document.getElementById('em_body').value
+        };
+        try {
+            const res = await apiFetch('/api/settings/email-templates/' + id, {
+                method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+            });
+            if (res.ok) {
+                alert("Email template updated.");
+                loadEmails();
+            } else alert("Error");
+        } catch (e) { }
+    }
+
+    // Currencies management
+    async function loadCurrencies() {
+        try {
+            const res = await apiFetch('/api/settings/currencies');
+            currenciesList = await res.json();
+            const tbody = document.getElementById('currencies_tbody');
+            tbody.innerHTML = '';
+            if (currenciesList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center">No currencies found.</td></tr>';
+            } else {
+                currenciesList.forEach(c => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${c.code}</td>
+                            <td>${c.name}</td>
+                            <td>${c.symbol}</td>
+                            <td>${c.is_global_default ? '<i class="fa-solid fa-check text-green"></i>' : '<i class="fa-solid fa-xmark text-red"></i>'}</td>
+                            <td class="action-cell">
+                                <button class="icon-btn edit-btn" onclick="openCurrencyModal(${c.id})"><i class="fa-solid fa-pen"></i></button>
+                                <button class="icon-btn danger-btn" onclick="deleteCurrency(${c.id})"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+        } catch (e) { console.error("Error loading currencies:", e); }
+    }
+
+    function openCurrencyModal(id = null) {
+        if (id) {
+            const c = currenciesList.find(x => x.id === id);
+            document.getElementById('currencyModalTitle').innerText = 'Edit Currency';
+            document.getElementById('curr_id').value = c.id;
+            document.getElementById('curr_code').value = c.code;
+            document.getElementById('curr_name').value = c.name;
+            document.getElementById('curr_symbol').value = c.symbol;
+            document.getElementById('curr_is_global').checked = c.is_global_default;
+        } else {
+            document.getElementById('currencyModalTitle').innerText = 'Add Currency';
+            document.getElementById('curr_id').value = '';
+            document.getElementById('curr_code').value = '';
+            document.getElementById('curr_name').value = '';
+            document.getElementById('curr_symbol').value = '';
+            document.getElementById('curr_is_global').checked = false;
+        }
+        openModal('currencyModal');
+    }
+
+    async function saveCurrency() {
+        const id = document.getElementById('curr_id').value;
+        const body = {
+            code: document.getElementById('curr_code').value,
+            name: document.getElementById('curr_name').value,
+            symbol: document.getElementById('curr_symbol').value,
+            is_global_default: document.getElementById('curr_is_global').checked
+        };
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `/api/settings/currencies/${id}` : '/api/settings/currencies';
+
+        try {
+            const res = await apiFetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            if (res.ok) {
+                closeModal('currencyModal');
+                loadCurrencies();
+            } else {
+                const err = await res.json();
+                alert("Error: " + (err.detail || "Failed to save"));
+            }
+        } catch (e) { alert("Network error"); }
+    }
+
+    async function deleteCurrency(id) {
+        if (!confirm("Are you sure?")) return;
+        try {
+            const res = await apiFetch(`/api/settings/currencies/${id}`, { method: 'DELETE' });
+            if (res.ok) loadCurrencies();
+            else alert("Error deleting currency");
+        } catch (e) { alert("Network error"); }
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+        loadCategories();
+        loadSubCategories();
+        await loadAllUsers();
+        await loadSites();
+        loadSiteTypes();
+        loadCompanyInfo();
+        loadApprovals();
+        loadEmails();
+        loadCurrencies();
+    });
+</script>
+{% endblock %}

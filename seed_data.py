@@ -2,8 +2,9 @@ from sqlalchemy.orm import Session
 from core.database import engine, Base
 from modules.users.models import User, Site, UserRole
 from modules.accounting.models import ChartOfAccount, AccountType
-from modules.inventory.models import Item
+from modules.inventory.models import InventoryItem as Item
 from core.security import get_password_hash
+from modules.settings.models import Currency, Country, VatGroup, DeliveryTerm, PaymentTerm, PaymentMethod
 
 def seed_database():
     # Attempt to create tables (Ensure XAMPP MySQL is running first!)
@@ -51,7 +52,6 @@ def seed_database():
             print("Seeded Default Chart of Accounts for Apparel Manufacturing.")
 
             # === ADDING ERP CONFIGURATION DEFAULTS ===
-            from modules.settings.models import Currency, Country, VatGroup, DeliveryTerm, PaymentTerm, PaymentMethod
             
             if not db.query(Currency).first():
                 db.add_all([
@@ -108,7 +108,9 @@ if __name__ == "__main__":
     print(f"Connecting to database at: {settings.DB_HOST}...")
     try:
         seed_database()
-        print("Done Seeding! 🎉")
+        print("Done Seeding!")
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"Failed to seed db: {e}")
         print("Please ensure XAMPP MySQL is turned ON and the 'sew_admin' database exists.")

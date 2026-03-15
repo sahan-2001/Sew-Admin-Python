@@ -1,6 +1,6 @@
 import enum
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Float, Enum, Text
-from core.database import Base
+from core.database import Base, TimestampMixin
 from datetime import datetime
 
 class PurchaseStatus(str, enum.Enum):
@@ -13,7 +13,7 @@ class PurchaseStatus(str, enum.Enum):
     INVOICED = "Invoiced"
     PAID = "Paid"
 
-class PurchaseOrder(Base):
+class PurchaseOrder(TimestampMixin, Base):
     __tablename__ = "purchase_orders"
     id = Column(Integer, primary_key=True, index=True)
     po_number = Column(String(50), unique=True, index=True)
@@ -28,7 +28,7 @@ class PurchaseOrder(Base):
     total_amount = Column(Float, default=0.0)
     payment_term_id = Column(Integer, ForeignKey("payment_terms.id"), nullable=True)
     
-class GRN(Base):
+class GRN(TimestampMixin, Base):
     __tablename__ = "grns" # Goods Receipt Note
     id = Column(Integer, primary_key=True, index=True)
     grn_number = Column(String(50), unique=True)

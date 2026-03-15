@@ -2,7 +2,7 @@ import enum
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Float, Enum, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from core.database import Base
+from core.database import Base, TimestampMixin
 
 class AccountType(str, enum.Enum):
     ASSET = "Asset"
@@ -11,7 +11,7 @@ class AccountType(str, enum.Enum):
     REVENUE = "Revenue"
     EXPENSE = "Expense"
 
-class ChartOfAccount(Base):
+class ChartOfAccount(TimestampMixin, Base):
     __tablename__ = "accounts"
     id = Column(Integer, primary_key=True, index=True)
     code = Column(String(50), unique=True, index=True) # e.g. 1000 for Cash
@@ -19,16 +19,15 @@ class ChartOfAccount(Base):
     account_type = Column(Enum(AccountType))
     is_active = Column(Boolean, default=True)
 
-class JournalEntry(Base):
+class JournalEntry(TimestampMixin, Base):
     __tablename__ = "journal_entries"
     id = Column(Integer, primary_key=True, index=True)
     reference = Column(String(50), index=True) # e.g. INV-001, PAY-002
     date = Column(DateTime, default=datetime.utcnow)
     description = Column(String(255))
-    created_by = Column(Integer, ForeignKey("users.id"))
-    site_id = Column(Integer, ForeignKey("sites.id"))
+    # created_by and site_id come from TimestampMixin
 
-class TransactionLine(Base):
+class TransactionLine(TimestampMixin, Base):
     __tablename__ = "transaction_lines"
     id = Column(Integer, primary_key=True, index=True)
     journal_id = Column(Integer, ForeignKey("journal_entries.id"))
